@@ -1,1 +1,3 @@
 Checking that I can use git and github successfully.
+
+Adding some text for a change and commit git cycle.
