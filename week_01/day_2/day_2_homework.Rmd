@@ -1,0 +1,89 @@
+---
+title: "day_2_homework"
+output: html_notebook
+---
+Dplyr Homework
+
+#Question 1:
+
+#Answer 1:
+
+load the tidyverse!
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+starbucks <- read_csv("data/starbucks_drinkMenu_expanded.csv")
+starbucks
+```
+
+```{r}
+dim(starbucks)
+```
+[1] 242  18
+
+The dataset has 242 observations (rows) of 18 variables (columns)
+
+```{r}
+glimpse(starbucks)
+```
+
+The dataset is a tibble. Variable types and names are shown above. 
+
+Variable names can also be displayed with the below:
+```{r}
+names(starbucks)
+```
+
+
+#Question 2
+
+#Answer 2
+
+```{r}
+#select specified variables
+starbucks_cal <- select(starbucks, Beverage_category, Beverage, Beverage_prep, Calories)
+
+#check for NAs
+na = sum(is.na(starbucks_cal))
+na
+```
+There are no missing values in the new dataset I have selected.
+
+#Question 3
+
+#Answer 3
+
+```{r}
+starbucks_cal_diff <- mutate(starbucks_cal, calorie_diff = Calories - 135)
+```
+
+#Question 4
+
+Summarise the mean number of calories in each beverage_category. Which 3 category of drinks have the most calories? Which 3 drinks have the least? Write a small summary of your findings.
+
+```{r}
+starbucks_cal_grp <- group_by(starbucks_cal, Beverage_category)
+summarise(starbucks_cal_grp,mean(Calories))
+```
+Actually this may fair better as a pipe, so I can sort it at the end:
+
+```{r}
+mean_cal <- starbucks_cal %>% 
+  group_by(Beverage_category) %>%
+  summarise(mean(Calories))
+mean_cal
+
+#arrange(mean_cal, "mean(Calories)") commented this out as this does not work. I have tried with and without the "". I am not sure why I cannot order the mean calories column? 
+
+names(mean_cal)
+rename(mean_cal, mean = "mean(Calories)")
+
+arrange(mean_cal, mean)
+
+#OH now I see it is a function and not a vector so I cannot sort by it. I understand now. I am not sure how to make this a vector...
+```
+
+The three drinks with the most calories are Smoothies with 282.2 Calories, Frappuccino® Blended Coffee with 276.9 Calories and Signature Espresso Drinks with 250.0. The three drinks with the lowest calories are Classic Espresso Drinks with 140.2 Calories, Shaken Iced Beverages with 114.4 Calories and Coffee with  low of 4.25 Calories!
