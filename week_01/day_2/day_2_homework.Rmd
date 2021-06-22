@@ -62,7 +62,7 @@ starbucks_cal_diff <- mutate(starbucks_cal, calorie_diff = Calories - 135)
 
 #Question 4
 
-Summarise the mean number of calories in each beverage_category. Which 3 category of drinks have the most calories? Which 3 drinks have the least? Write a small summary of your findings.
+#Answer 4
 
 ```{r}
 starbucks_cal_grp <- group_by(starbucks_cal, Beverage_category)
