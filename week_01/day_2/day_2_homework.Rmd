@@ -74,6 +74,7 @@ Actually this may fair better as a pipe, so I can sort it at the end:
 mean_cal <- starbucks_cal %>% 
   group_by(Beverage_category) %>%
   summarise(mean(Calories))
+
 mean_cal
 
 #arrange(mean_cal, "mean(Calories)") commented this out as this does not work. I have tried with and without the "". I am not sure why I cannot order the mean calories column? 
@@ -84,6 +85,65 @@ rename(mean_cal, mean = "mean(Calories)")
 arrange(mean_cal, mean)
 
 #OH now I see it is a function and not a vector so I cannot sort by it. I understand now. I am not sure how to make this a vector...
+
+SOLUTION:
+mean_cal <- starbucks_cal %>% 
+  group_by(Beverage_category) %>%
+  summarise(mean_calories = mean(Calories)) %>% #this is where I went wrong - I didn't add mean(Calories) as a new variable.
+  arrange(desc(mean_calories))
+
+most_cal <- head(mean_cal, 3)
+
+least_cal <- tail(mean_cal, 3)
+
 ```
 
-The three drinks with the most calories are Smoothies with 282.2 Calories, Frappuccino® Blended Coffee with 276.9 Calories and Signature Espresso Drinks with 250.0. The three drinks with the lowest calories are Classic Espresso Drinks with 140.2 Calories, Shaken Iced Beverages with 114.4 Calories and Coffee with  low of 4.25 Calories!
+The three drinks with the most calories are Smoothies with 282.2 Calories, Frappuccino® Blended Coffee with 276.9 Calories and Signature Espresso Drinks with 250.0. The three drinks with the lowest calories are Classic Espresso Drinks with 140.2 Calories, Shaken Iced Beverages with 114.4 Calories and Coffee with a low of 4.25 Calories!
+
+
+Question 5
+
+Answer 5
+
+```{r}
+
+ave_cal <- starbucks_cal %>%
+  group_by(Beverage_prep) %>%
+  summarise(ave_calories = mean(Calories)) %>%
+  arrange(ave_calories)
+
+ave_cal
+
+```
+
+Question 6
+
+Answer 6
+First need the average of all drinks
+
+```{r}
+ave_all <- summarise(starbucks_cal, mean(Calories)) %>%
+  pull()
+ave_all
+```
+So 193.8719 is the mean calories for all drinks.
+
+Now need to find the Beverage_prep with > 193.8719 calories
+
+```{r}
+greater <- ave_cal %>%
+  filter(ave_calories >= ave_all)
+greater
+```
+Question 7
+Which is the best type of coffee drink (and by ‘drink’ we mean the combination of Beverage_category, Beverage and Beverage_prep) to get if you’re worried about consuming too many calories?
+
+Answer 7
+
+```{r}
+
+best_coffee <- starbucks_cal %>%
+  
+  
+```
+

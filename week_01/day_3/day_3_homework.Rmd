@@ -1,0 +1,167 @@
+---
+title: "day_3_homework"
+output: html_notebook
+---
+
+#Answer 1.
+
+```{r}
+library(tidyverse)
+movies <- read_csv("data/movies.csv")
+
+```
+Reading in the csv shows that the data has 13 columns and 4803 rows. the columns are a mix of character and double classes.
+Using the glimpse() and head() functionso shows us this information in another way, but does not indicate any missing values.
+
+```{r}
+glimpse(movies)
+head(movies)
+```
+
+The variable names don't look like they need cleaning, which is great! I would also like to investigate the data for missing values.
+
+I could do this by looking through the whole dataset first with is.na() and if there are missing values I can then try to find them by focusing on specific columns in turn.
+
+
+#Answer 2.
+
+Following the hint: first have a look to see if there are na in either original_title and title to help inform decision.
+
+```{r}
+sum(is.na(movies$title))
+```
+```{r}
+sum(is.na(movies$original_title))
+```
+Ok so that tells me there are no missing values in either. Because I have looked at the data table I know that original_title has non-english characters. I don't know how to pick this up by coding??
+My choice will be title.
+
+```{r}
+movies_selected <- movies %>%
+  select(title, runtime, budget)
+```
+
+
+#Answer 3.
+
+```{r}
+
+title_NAs <- movies_selected %>%
+ filter(is.na(title))
+title_NAs
+
+runtime_NAs <- movies_selected %>%
+ filter(is.na(runtime))
+runtime_NAs
+
+budget_NAs <- movies_selected %>%
+ filter(is.na(budget))
+budget_NAs
+
+```
+
+This could also be done using summarise and count (budget shown as an example):
+
+```{r}
+budget_NAs <- movies_selected %>%
+  summarise(count = sum(is.na(budget)))
+```
+
+
+There are two missing values in runtime. The other variables do not have any missing values recognised as NA.
+
+
+#Answer 4.
+
+```{r}
+
+movies_runtime <- movies_selected %>%
+  mutate(runtime = na_if(runtime, 0))
+
+new_runtime_NAs <- movies_runtime %>%
+  summarise(count = sum(is.na(runtime)))
+new_runtime_NAs
+
+```
+
+Changing the movies with a runtime of 0 to NAs has added 35 NAs to this variable making a total of 37 NAs in the runtime variable in this dataset.
+
+
+#Answer 5.
+
+```{r}
+movies_imputed <- movies_runtime %>%
+  mutate(
+    runtime = coalesce(
+      runtime, median(runtime, na.rm = TRUE)
+      )
+    )
+
+imputed_runtime_NAs <- movies_imputed %>%
+  summarise(count = sum(is.na(runtime)))
+imputed_runtime_NAs
+
+```
+
+Imputing the median runtime has removed all missing values from this variable.
+
+
+#Answer 6.
+
+```{r}
+Ten_shortest <- movies_imputed %>%
+  slice_min(runtime, n = 10)
+Ten_shortest
+
+Ten_longest <- movies_imputed %>%
+  slice_max(runtime, n = 10)
+Ten_longest
+```
+
+
+
+#Answer 7.
+
+```{r}
+movies_imputed <- movies_imputed %>%
+  mutate(
+    budget = if_else(budget < 100, median(budget), budget)
+  )
+```
+
+
+2 Extension
+
+
+Question 1.
+
+Using case_when, create a new column called budget_type and label budgets as follows:
+
+Budgets below 12 million as ‘Small budget’
+Budgets between 12 and 40 million as ‘Medium budget’
+Budgets 40 millions and above as ‘Big budget’
+Save this into a new variable called movie_budgets.
+
+Hint:
+
+#Extension Answer 1.
+
+```{r}
+movie_budgets <- movies_imputed %>%
+  mutate(
+    budget_type = case_when(
+      budget < 12e6 ~ "Small budget",
+      budget >= 12e6 & budget < 40e6 ~ "Medium budget",
+      budget >= 40e6 ~ "Big budget"
+    )
+  )
+movie_budgets
+```
+
+
+Question 2.
+
+Take the original dataset with all the variables. Using across and where, summarise the number of missing values, first across all columns of type character, and then across all columns of type numeric.
+
+#Answer 2.
+
