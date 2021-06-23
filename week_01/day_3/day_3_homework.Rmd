@@ -33,7 +33,7 @@ sum(is.na(movies$title))
 ```{r}
 sum(is.na(movies$original_title))
 ```
-Ok so that tells me there are no missing values in either. Because I have looked at the data table I know that original_title has non-english characters. I don't know how to pick this up by coding??
+Ok so that tells me there are no missing values in either. Because I have looked at the data table I know that original_title has non-english characters. I don't know how to pick this up by coding?
 My choice will be title.
 
 ```{r}
@@ -97,8 +97,10 @@ movies_imputed <- movies_runtime %>%
       )
     )
 
+#check to make sure there are no NAs
 imputed_runtime_NAs <- movies_imputed %>%
   summarise(count = sum(is.na(runtime)))
+
 imputed_runtime_NAs
 
 ```
@@ -132,18 +134,6 @@ movies_imputed <- movies_imputed %>%
 
 2 Extension
 
-
-Question 1.
-
-Using case_when, create a new column called budget_type and label budgets as follows:
-
-Budgets below 12 million as ‘Small budget’
-Budgets between 12 and 40 million as ‘Medium budget’
-Budgets 40 millions and above as ‘Big budget’
-Save this into a new variable called movie_budgets.
-
-Hint:
-
 #Extension Answer 1.
 
 ```{r}
@@ -159,9 +149,18 @@ movie_budgets
 ```
 
 
-Question 2.
-
-Take the original dataset with all the variables. Using across and where, summarise the number of missing values, first across all columns of type character, and then across all columns of type numeric.
-
 #Answer 2.
 
+```{r}
+char_NA <- movies %>%
+  summarise(across(where(is.character), is.na)) %>%
+  sum()
+char_NA
+
+num_NA <- movies %>%
+  summarise(across(where(is.numeric), is.na)) %>%
+  sum()
+num_NA
+  
+```
+There are 3940 missing values across all columns of type character, and 2 missing values across all columns of type numeric.
