@@ -1,0 +1,20 @@
+---
+title: "dplyr weekend homework"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+```{r}
+library(tidyverse)
+book <- read_csv("data/books.csv")
+```
+initial thoughts
+
+How many different authors are there? Are there some publishing houses with more authors than others?
+What is the language split between the authors/publishing houses?
+  How many languages are there?
+Link between page numbers and rating?
+
+Notice NAs and two slipped rows. Need to think of a way to spot this and clean it up.
+
