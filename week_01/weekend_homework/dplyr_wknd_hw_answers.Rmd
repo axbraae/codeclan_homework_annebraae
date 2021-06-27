@@ -3,18 +3,224 @@ title: "dplyr weekend homework"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
+#Load in libraries (update with additional libraries as needed)
 ```{r}
 library(tidyverse)
-book <- read_csv("data/books.csv")
+library(janitor)
 ```
-initial thoughts
 
+
+#Load in the data and initial investigation
+
+```{r}
+book <- read_csv("data/books.csv") 
+book
+glimpse(book)
+names(book)
+
+```
+#Initial thoughts
+Heading names seem fine apart from bookID. Variables appear to have been classed appropriately.
+
+Questions I would like to work through:
 How many different authors are there? Are there some publishing houses with more authors than others?
 What is the language split between the authors/publishing houses?
   How many languages are there?
+  Are there languages which are not english? Do I need to deal with these?
 Link between page numbers and rating?
+Anything going on between language and rating? (i.e. are eng and eng-us books rated higher and or read more?)
 
-Notice NAs and two slipped rows. Need to think of a way to spot this and clean it up.
+Also:
+Cool error on load up!
 
+Warning: 21 parsing failures.
+ row            col           expected            actual             file
+1570 title          delimiter or quote                   'data/books.csv'
+1570 title          delimiter or quote I                 'data/books.csv'
+3349 average_rating a double           Jr./Sam B. Warner 'data/books.csv'
+3349 num_pages      a double           en-US             'data/books.csv'
+3349 NA             12 columns         13 columns        'data/books.csv'
+.... .............. .................. ................. ................
+See problems(...) for more details.
+
+
+#Investigating errors on load
+
+```{r}
+#Looking at error 1 on row 1570
+slice(book, 1570)
+```
+This appears to be a strange title with extra quotation marks
+
+```{r}
+#Look at the next error row
+slice(book, 3349)
+```
+Something strange is going on here. Looks like the data has been shifted 1 column to the right. Possible data entry issue.
+
+I am going to try the error suggestion and adjust for quotes in the read in step. Let's see if I can remove some errors
+
+```{r}
+book <- read_csv("data/books.csv", quote = "") 
+#after reading the parsing errors tried adding: quote = "" to the above
+```
+
+
+Warning: 12 parsing failures.
+
+Fantastic! Now I only have 12 parsing failures instead of 21. 
+
+I am going to try the error suggestion and run problems(book) to pull out the errors with the dataset into a new dataset, 'book_errors'. So I can easily look at the rows which are causing trouble.
+
+```{r}
+error_rows <- problems(book) %>%
+  distinct(row) %>% 
+  pull()
+book_errors <- slice(book, error_rows)
+
+```
+
+These four rows contain data that has skipped a row, this is because of an extra comma in the authors column. I do not know how to deal with this by code. I will manually edit them and resave the csv as books_edit.csv to continue.
+
+Reload the data and clean the names at the same time.
+
+```{r}
+book_edit <- read_csv("data/books_edit.csv", quote = "") %>%
+  clean_names()
+
+names(book_edit)
+```
+#Missing data
+Now let's look at missing data in the remaining rows, summarised across the columns
+
+```{r}
+# writing this function to count na in a column
+na_count <- function(col){
+    return(sum(is.na(col)))
+}
+
+book_edit %>%
+  summarise(across(everything(), na_count))
+```
+
+Hmm. There are no NAs! At least no NAs being recognised by R.
+
+Ok so now I can recode some of the zeros I can reasonably assume to be NAs.
+
+Specifically:
+num_pages = 0 
+average rating if average_rating = 0 and ratings_count > 0
+ratings count if average_rating > 0 and ratings_count = 0
+
+
+```{r}
+book_edit_na <- book_edit %>% 
+  mutate(num_pages = na_if(num_pages, 0),
+         average_rating = if_else(average_rating == 0 & ratings_count > 0, NA_real_,
+                                  as.numeric(average_rating)),
+         ratings_count = if_else(ratings_count == 0 & average_rating > 0, NA_real_,
+                    as.numeric(ratings_count))
+         )
+
+#count NAs introduced
+book_edit_na %>%
+  summarise(across(everything(), na_count))
+
+#Resummarise cleaned dataset
+dim(book_edit_na)
+glimpse(book_edit_na)
+head(book_edit_na)
+```
+
+#Data cleaning summary:
+Books.csv has been loaded, parsing errors fixed, names cleaned, and missing values recoded. Cleaned dataset book_edit_na has 12 columns (variables) and 11127 rows (observations). Data has been recoded as missing and there are 76 missing page numbers (num_pages) and 55 missing ratings count (ratings_count). At this stage I will leave the NAs in the dataset, as they are only a small fraction of the total data in each column.
+
+```{r}
+book_edit_na %>% 
+  distinct(authors)
+```
+ 
+Questions I would like to work through:
+How many different authors are there? Are there some publishing houses with more authors than others?
+What is the language split between the authors/publishing houses?
+  How many languages are there?
+  Are there languages which are not english? Do I need to deal with these?
+Link between page numbers and rating?
+Anything going on between language and rating? (i.e. are eng and eng-us books rated higher and or read more?)
+
+
+#Looking at the authors
+Questions I want to answer:
+How many different authors are there? 
+Who are the top ten authors (based on average rating)?
+Who are the bottom ten authors (based on average rating)?
+Are there some publishing houses with more authors than others?
+```{r}
+book_edit_na %>%
+  distinct(authors) %>% 
+  count()
+
+
+```
+There are 6642 different authors listed. HOWEVER I note some authors may be listed more than once if they are co authors. 
+There are too many authors to examine individually. Let's look at the top ten based on average rating, and also page number.
+
+```{r}
+author_subset <- book_edit_na %>% 
+  select(authors, title, ratings_count, num_pages)
+
+reviewed_top_ten <- author_subset %>% 
+  slice_max(ratings_count, n = 10)
+reviewed_top_ten
+
+longest_top_ten <- author_subset %>% 
+  slice_max(num_pages, n = 10)
+longest_top_ten
+
+author_subset %>% 
+  group_by(authors) %>% 
+  summarise(mean_pgs = mean(num_pages)) %>% 
+  slice_max(mean_pgs, n = 10)
+
+author_subset %>%
+  group_by(authors) %>% 
+  mutate(total_books = distinct(title))
+  summarise(total_books = distinct(title)) %>% 
+  slice_max(total_books, n = 10)
+  
+test <- author_subset %>%
+  group_by(authors)%>%
+  distinct(authors)
+test
+
+#this counts the number of times an author has been mentioned.
+author_subset %>%
+  count(authors) %>%
+```
+
+
+
+book_edit_na %>%
+  group_by(authors) %>% 
+  select(authors, ratings_count, num_pages) %>% 
+  summarise(across(.cols = everything(), sum)
+    )
+    
+rated_top_ten <- book_edit_na %>%
+  select(authors, title, average_rating, ratings_count, num_pages) %>% 
+  slice_max(average_rating, n = 10)
+
+
+
+
+#Looking at the languages
+What is the language split between the authors/publishing houses?
+  How many languages are there?
+  Are there languages which are not english? Do I need to deal with these?
+
+```{r}
+book_edit_na %>% 
+  distinct(language_code)
+```
+In the language_codes column english is coded three times eng (which is not a localisation language code), en-US, en-GB and en-CA.
+For language_code, eng is not a localisation language code - recode to en.
