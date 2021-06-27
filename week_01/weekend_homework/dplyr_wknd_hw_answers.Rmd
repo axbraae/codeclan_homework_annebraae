@@ -182,11 +182,11 @@ author_subset %>%
   summarise(mean_pgs = mean(num_pages)) %>% 
   slice_max(mean_pgs, n = 10)
 
-author_subset %>%
-  group_by(authors) %>% 
-  mutate(total_books = distinct(title))
-  summarise(total_books = distinct(title)) %>% 
-  slice_max(total_books, n = 10)
+#author_subset %>%
+  #group_by(authors) %>% 
+  #mutate(total_books = distinct(title))
+  #summarise(total_books = distinct(title)) %>% 
+  #slice_max(total_books, n = 10)
   
 test <- author_subset %>%
   group_by(authors)%>%
@@ -195,7 +195,7 @@ test
 
 #this counts the number of times an author has been mentioned.
 author_subset %>%
-  count(authors) %>%
+  count(authors)
 ```
 
 
@@ -213,14 +213,83 @@ rated_top_ten <- book_edit_na %>%
 
 
 
-#Looking at the languages
-What is the language split between the authors/publishing houses?
-  How many languages are there?
-  Are there languages which are not english? Do I need to deal with these?
+#Looking at the languages\
+How many languages are there?
 
 ```{r}
 book_edit_na %>% 
-  distinct(language_code)
+  distinct(language_code) %>%
+  arrange(language_code)
 ```
-In the language_codes column english is coded three times eng (which is not a localisation language code), en-US, en-GB and en-CA.
-For language_code, eng is not a localisation language code - recode to en.
+There are 27 different languages in the books dataset. It looks like English is coded four times: eng (which is not a localisation language code), en-US, en-GB and en-CA. (enm is middle english, so I will not include this.)
+
+Let's find out what the total text_reviews_count and ratings_count is in all four English groups compared to all other languages.
+
+```{r}
+#select columns to answer the questions involving language
+language_subset <- book_edit_na %>% 
+  select(language_code, publisher, ratings_count, text_reviews_count) %>% 
+  mutate(english = case_when(
+      language_code %in% c("eng", "en-GB", "en-CA", "en-US") ~ TRUE,
+      TRUE ~ FALSE)
+        )
+```
+
+
+
+```{r}
+language_subset %>% 
+  group_by(english) %>% 
+  summarise(
+    sum(text_reviews_count),
+    sum(ratings_count, na.rm = TRUE))
+```
+
+Unsurprisingly perhaps, there are far more text reviews for books written in English (eng, en-GB, en-US and en-CA) than in all other languages combined (5997392 compared to 31823). If we put it as a percentage, 99.47% of the text reviews in this Goodreads dataset are written for English books, and only 0.53% of the text reviews are in another language.
+
+This is also seen when looking at the total for all ratings count (198017611 ratings for English books compared to 1560813, or 78.2% of ratings compared to 21.8%).
+
+Let's look at the publishers with the most English titles and the publishers with the most non-English titles.
+
+```{r}
+publisher_subset <- language_subset %>% 
+  group_by(publisher) %>% 
+  mutate(non_english = !english) %>% 
+  summarise(tot_eng = sum(english), 
+            tot_non_eng = sum(non_english))
+publisher_subset
+
+
+top_eng_publishers <- publisher_subset %>% 
+  slice_max(tot_eng, n = 10)
+top_eng_publishers
+
+top_non_eng_publishers <- publisher_subset %>% 
+  slice_max(tot_non_eng, n = 10)
+top_non_eng_publishers
+```
+The top ten publishers with the most English titles are very different from the top ten publishers with the most non-English titles!
+
+#Have a look at publication date, language and number of reviews
+
+
+extra code
+
+```{r}
+
+language_subset %>% 
+  group_by(publisher) %>% 
+  summarise(english) 
+
+language_subset %>% 
+  
+names(publisher_subset)
+
+stock %>% 
+  group_by(category) %>%
+  summarise(
+    across(contains("price"), ~sum(.x, na.rm = TRUE))
+  )
+
+```
+
