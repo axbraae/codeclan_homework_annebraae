@@ -48,7 +48,7 @@ slice(book, 3349)
 ```
 Something strange is going on here. Looks like the data has been shifted 1 column to the right. Possible data entry issue.
 
-I am going to try the error suggestion and adjust for quotes when I read in the data. Let's see if I can remove some errors
+I am going to try the error suggestion and adjust for quotes when I read in the data. Let's see if I can remove some errors.
 
 ```{r}
 #after reading the parsing errors tried adding: quote = "" to read_csv
@@ -90,7 +90,7 @@ names(book)
 Now let's look at missing data in the remaining rows, summarised across the columns.
 
 ```{r}
-# writing na_count function to count na in a column
+# writing na_counter function to count na in a column
 na_counter <- function(column){
     return(sum(is.na(column)))
     }
@@ -222,18 +222,20 @@ Let's look at the publishers with the most English titles and the publishers wit
 publisher_subset <- language_subset %>% 
   group_by(publisher) %>% 
   mutate(non_english = !english) %>% 
-  summarise(tot_eng = sum(english), 
-            tot_non_eng = sum(non_english)
-            )
+  summarise(
+    tot_eng = sum(english), 
+    tot_non_eng = sum(non_english)
+  )
 publisher_subset
-```
-```{r}
+
+#select publishers with the most books in English
 top_eng_publishers <- publisher_subset %>% 
   slice_max(tot_eng, n = 10)
 top_eng_publishers
 ```
 
 ```{r}
+#Select publishers with the most books in non-English
 top_non_eng_publishers <- publisher_subset %>% 
   slice_max(tot_non_eng, n = 10)
 top_non_eng_publishers
