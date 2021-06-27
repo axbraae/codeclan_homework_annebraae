@@ -3,46 +3,36 @@ title: "dplyr weekend homework"
 output: html_notebook
 ---
 
-#Load in libraries (update with additional libraries as needed)
+#Load in libraries 
+(This code chunk will be updated with additional libraries as needed)
 ```{r}
 library(tidyverse)
 library(janitor)
 ```
 
-
 #Load in the data and initial investigation
-
 ```{r}
 book <- read_csv("data/books.csv") 
-book
+dim(book)
 glimpse(book)
 names(book)
-
 ```
 #Initial thoughts
-Heading names seem fine apart from bookID. Variables appear to have been classed appropriately.
+There is a parsing error. Heading names seem fine apart from bookID. Variables appear to have been classed appropriately.
 
 Questions I would like to work through:
-How many different authors are there? Are there some publishing houses with more authors than others?
-What is the language split between the authors/publishing houses?
-  How many languages are there?
-  Are there languages which are not english? Do I need to deal with these?
-Link between page numbers and rating?
-Anything going on between language and rating? (i.e. are eng and eng-us books rated higher and or read more?)
+How many different authors are there?
+Who are the top ten most rated authors (based on rating count)?
+Who are the ten authors with the longest books?
+How many different languages are there?
+How many text reviews do books written in English have?
+How many text reviews do books written in non-English have?
+Is this count similar for the overall number of ratings received for English and non-English books? 
+Who are the top ten publishers of English books?
+Who are the top ten publishers of non-English books?
 
 Also:
-Cool error on load up!
-
-Warning: 21 parsing failures.
- row            col           expected            actual             file
-1570 title          delimiter or quote                   'data/books.csv'
-1570 title          delimiter or quote I                 'data/books.csv'
-3349 average_rating a double           Jr./Sam B. Warner 'data/books.csv'
-3349 num_pages      a double           en-US             'data/books.csv'
-3349 NA             12 columns         13 columns        'data/books.csv'
-.... .............. .................. ................. ................
-See problems(...) for more details.
-
+Cool error on load up! There are 21 parsing failures are listed. The first with row 1570, and has to do with a delimiter or quote in the title column. The second to do with characters being entered into a double variable column.
 
 #Investigating errors on load
 
@@ -58,11 +48,11 @@ slice(book, 3349)
 ```
 Something strange is going on here. Looks like the data has been shifted 1 column to the right. Possible data entry issue.
 
-I am going to try the error suggestion and adjust for quotes in the read in step. Let's see if I can remove some errors
+I am going to try the error suggestion and adjust for quotes when I read in the data. Let's see if I can remove some errors
 
 ```{r}
+#after reading the parsing errors tried adding: quote = "" to read_csv
 book <- read_csv("data/books.csv", quote = "") 
-#after reading the parsing errors tried adding: quote = "" to the above
 ```
 
 
@@ -70,36 +60,42 @@ Warning: 12 parsing failures.
 
 Fantastic! Now I only have 12 parsing failures instead of 21. 
 
-I am going to try the error suggestion and run problems(book) to pull out the errors with the dataset into a new dataset, 'book_errors'. So I can easily look at the rows which are causing trouble.
+I am going to try the error suggestion and run problems(book) to pull out the errors with the dataset into a new dataset, 'book_errors'. This is so I can easily look at the rows which are causing trouble.
 
 ```{r}
+#get the information on which rows are not parsing
 error_rows <- problems(book) %>%
   distinct(row) %>% 
   pull()
-book_errors <- slice(book, error_rows)
 
+#create a new dataset with only the problematic rows
+book_errors <- slice(book, error_rows)
 ```
 
-These four rows contain data that has skipped a row, this is because of an extra comma in the authors column. I do not know how to deal with this by code. I will manually edit them and resave the csv as books_edit.csv to continue.
+These four rows contain data that has skipped a column. This is because of an extra comma in the authors column. I do not know how to deal with this by code. I will manually edit them and resave the csv as books_edit.csv to continue.
 
-Reload the data and clean the names at the same time.
+Next I will reload the data and clean the names at the same time.
 
 ```{r}
-book_edit <- read_csv("data/books_edit.csv", quote = "") %>%
+book <- read_csv("data/books_edit.csv", quote = "") %>%
   clean_names()
 
-names(book_edit)
+#checking the names have been cleaned up
+names(book)
 ```
+
+
 #Missing data
-Now let's look at missing data in the remaining rows, summarised across the columns
+
+Now let's look at missing data in the remaining rows, summarised across the columns.
 
 ```{r}
-# writing this function to count na in a column
+# writing na_count function to count na in a column
 na_count <- function(col){
     return(sum(is.na(col)))
 }
 
-book_edit %>%
+book %>%
   summarise(across(everything(), na_count))
 ```
 
@@ -107,14 +103,16 @@ Hmm. There are no NAs! At least no NAs being recognised by R.
 
 Ok so now I can recode some of the zeros I can reasonably assume to be NAs.
 
-Specifically:
-num_pages = 0 
-average rating if average_rating = 0 and ratings_count > 0
-ratings count if average_rating > 0 and ratings_count = 0
-
+I am going to set the following to be NA:
+  num_pages = 0  
+    (there can't be no pages in a book)
+  average rating if average_rating = 0 and ratings_count > 0 
+    (you can't have an average rating of nothing if you have had a rating count)
+  ratings count if average_rating > 0 and ratings_count = 0
+    (you can't have a rating count of nothing if there is an average rating score)
 
 ```{r}
-book_edit_na <- book_edit %>% 
+book_clean <- book %>% 
   mutate(num_pages = na_if(num_pages, 0),
          average_rating = if_else(average_rating == 0 & ratings_count > 0, NA_real_,
                                   as.numeric(average_rating)),
@@ -123,111 +121,75 @@ book_edit_na <- book_edit %>%
          )
 
 #count NAs introduced
-book_edit_na %>%
+book_clean %>%
   summarise(across(everything(), na_count))
-
-#Resummarise cleaned dataset
-dim(book_edit_na)
-glimpse(book_edit_na)
-head(book_edit_na)
 ```
 
 #Data cleaning summary:
-Books.csv has been loaded, parsing errors fixed, names cleaned, and missing values recoded. Cleaned dataset book_edit_na has 12 columns (variables) and 11127 rows (observations). Data has been recoded as missing and there are 76 missing page numbers (num_pages) and 55 missing ratings count (ratings_count). At this stage I will leave the NAs in the dataset, as they are only a small fraction of the total data in each column.
+Books.csv has been loaded, parsing errors fixed, names cleaned, and missing values assigned. The cleaned dataset book_clean has 12 columns (variables) and 11127 rows (observations). Data has been recoded as missing and there are 76 missing page numbers (num_pages) and 55 missing ratings count (ratings_count). At this stage I will leave the NAs in the dataset, as they are only a small fraction of the total data for each variable.
 
-```{r}
-book_edit_na %>% 
-  distinct(authors)
-```
- 
-Questions I would like to work through:
-How many different authors are there? Are there some publishing houses with more authors than others?
-What is the language split between the authors/publishing houses?
-  How many languages are there?
-  Are there languages which are not english? Do I need to deal with these?
-Link between page numbers and rating?
-Anything going on between language and rating? (i.e. are eng and eng-us books rated higher and or read more?)
-
+Now I will move on to summarising and describing the data.
 
 #Looking at the authors
-Questions I want to answer:
-How many different authors are there? 
-Who are the top ten authors (based on average rating)?
-Who are the bottom ten authors (based on average rating)?
-Are there some publishing houses with more authors than others?
+  Questions I want to answer:
+      How many different authors are there? 
+      Who are the top ten most rated authors (based on rating count)?
+      Who are the ten authors with the longest books?
 ```{r}
-book_edit_na %>%
+#count all the unique authors
+book_clean %>%
   distinct(authors) %>% 
   count()
-
-
 ```
-There are 6642 different authors listed. HOWEVER I note some authors may be listed more than once if they are co authors. 
-There are too many authors to examine individually. Let's look at the top ten based on average rating, and also page number.
+There are 6643 different authors listed. However, I note some authors may be listed more than once if they are coauthors. 
+
+Let's look at the top ten authors based on total number of reviews.
 
 ```{r}
-author_subset <- book_edit_na %>% 
+author_subset <- book_clean %>% 
   select(authors, title, ratings_count, num_pages)
 
 reviewed_top_ten <- author_subset %>% 
   slice_max(ratings_count, n = 10)
 reviewed_top_ten
+```
+Looks like Stephenie Meyer with the first Twilight book has received the most ratings on Goodreads! J.K. Rowling also features several times in the top ten most rated authors.
 
+Now I will have a look at the authors with the longest books.
+
+```{r}
 longest_top_ten <- author_subset %>% 
   slice_max(num_pages, n = 10)
 longest_top_ten
-
-author_subset %>% 
-  group_by(authors) %>% 
-  summarise(mean_pgs = mean(num_pages)) %>% 
-  slice_max(mean_pgs, n = 10)
-
-#author_subset %>%
-  #group_by(authors) %>% 
-  #mutate(total_books = distinct(title))
-  #summarise(total_books = distinct(title)) %>% 
-  #slice_max(total_books, n = 10)
-  
-test <- author_subset %>%
-  group_by(authors)%>%
-  distinct(authors)
-test
-
-#this counts the number of times an author has been mentioned.
-author_subset %>%
-  count(authors)
 ```
-
-
-
-book_edit_na %>%
-  group_by(authors) %>% 
-  select(authors, ratings_count, num_pages) %>% 
-  summarise(across(.cols = everything(), sum)
-    )
-    
-rated_top_ten <- book_edit_na %>%
-  select(authors, title, average_rating, ratings_count, num_pages) %>% 
-  slice_max(average_rating, n = 10)
-
-
-
-
-#Looking at the languages\
-How many languages are there?
+Ah, this was a bit of a trick question as the books listed with the highest page numbers are mostly boxsets! Interestingly, two J.K. Rowling boxsets feature in this list.
+ 
+#Looking at the languages
+Now I would like to have a look at the different languages of books in this dataset.
+Questions I want to answer:
+  How many languages are there?
+  How many text reviews do books written in English have?
+  How many text reviews do books written in non-English have?
+  Is this count similar for the overall ratings received for English and non-English books? 
+  Who are the top ten publishers of English books?
+  Who are the top ten publishers of non-English books?
 
 ```{r}
-book_edit_na %>% 
+#counting how many languages there are and arranging them alphabetically
+book_clean %>% 
   distinct(language_code) %>%
   arrange(language_code)
 ```
-There are 27 different languages in the books dataset. It looks like English is coded four times: eng (which is not a localisation language code), en-US, en-GB and en-CA. (enm is middle english, so I will not include this.)
+
+There are 27 different languages in the books dataset. It looks like English is coded four times: eng (which is not a localisation language code), en-US, en-GB and en-CA. (Additional note: enm is middle english, so I will not include this as an English book).
 
 Let's find out what the total text_reviews_count and ratings_count is in all four English groups compared to all other languages.
 
 ```{r}
-#select columns to answer the questions involving language
-language_subset <- book_edit_na %>% 
+#subset the dataset to answer the questions on English books
+#add a column, english, set to TRUE if the language is English
+
+language_subset <- book_clean %>% 
   select(language_code, publisher, ratings_count, text_reviews_count) %>% 
   mutate(english = case_when(
       language_code %in% c("eng", "en-GB", "en-CA", "en-US") ~ TRUE,
@@ -238,6 +200,8 @@ language_subset <- book_edit_na %>%
 
 
 ```{r}
+#generate a summary table counting the total number of text reviews and ratings counts for English and non-English books
+
 language_subset %>% 
   group_by(english) %>% 
   summarise(
@@ -252,44 +216,27 @@ This is also seen when looking at the total for all ratings count (198017611 rat
 Let's look at the publishers with the most English titles and the publishers with the most non-English titles.
 
 ```{r}
+#create another dataset grouping by publisher
+#add another logic column set to TRUE if language IS NOT English
+
 publisher_subset <- language_subset %>% 
   group_by(publisher) %>% 
   mutate(non_english = !english) %>% 
   summarise(tot_eng = sum(english), 
-            tot_non_eng = sum(non_english))
+            tot_non_eng = sum(non_english)
+            )
 publisher_subset
-
-
+```
+```{r}
 top_eng_publishers <- publisher_subset %>% 
   slice_max(tot_eng, n = 10)
 top_eng_publishers
+```
 
+```{r}
 top_non_eng_publishers <- publisher_subset %>% 
   slice_max(tot_non_eng, n = 10)
 top_non_eng_publishers
 ```
-The top ten publishers with the most English titles are very different from the top ten publishers with the most non-English titles!
 
-#Have a look at publication date, language and number of reviews
-
-
-extra code
-
-```{r}
-
-language_subset %>% 
-  group_by(publisher) %>% 
-  summarise(english) 
-
-language_subset %>% 
-  
-names(publisher_subset)
-
-stock %>% 
-  group_by(category) %>%
-  summarise(
-    across(contains("price"), ~sum(.x, na.rm = TRUE))
-  )
-
-```
-
+The top ten publishers with the most English titles are very different from the top ten publishers with the most non-English titles! Interestingly in both groups there are some book titles in other languages. The top ten publishers with non-English titles contains 11 publishers. I think this is because there are several publishers with the same total count of non-English books.
