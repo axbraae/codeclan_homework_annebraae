@@ -91,12 +91,12 @@ Now let's look at missing data in the remaining rows, summarised across the colu
 
 ```{r}
 # writing na_count function to count na in a column
-na_count <- function(col){
-    return(sum(is.na(col)))
-}
+na_counter <- function(column){
+    return(sum(is.na(column)))
+    }
 
 book %>%
-  summarise(across(everything(), na_count))
+  summarise(across(.cols = everything(), na_counter))
 ```
 
 Hmm. There are no NAs! At least no NAs being recognised by R.
@@ -122,7 +122,7 @@ book_clean <- book %>%
 
 #count NAs introduced
 book_clean %>%
-  summarise(across(everything(), na_count))
+  summarise(across(.cols = everything(), na_counter))
 ```
 
 #Data cleaning summary:
