@@ -1,0 +1,139 @@
+---
+title: "Tidy and Joins homework"
+output: html_notebook
+---
+
+#1.1 Joins
+
+#Answer 1
+
+```{r}
+library(tidyverse)
+library(janitor)
+
+card <- read_csv("data/CardBase.csv") %>% 
+  clean_names
+customer <- read_csv("data/CustomerBase.csv") %>% 
+  clean_names
+fraud <- read_csv("data/FraudBase.csv") %>% 
+  clean_names
+transaction <- read_csv("data/TransactionBase.csv") %>% 
+  clean_names
+
+```
+#Answer 2
+
+I would expect to see 500 rows (i.e. all records of card details) being found in the new joined dataset. I do not expect any additional rows to be added.
+I am going to run the code and store the information in a new dataset card_customer.
+
+```{r}
+card_customer <- left_join(card, customer, by = "cust_id")
+```
+
+
+#Answer 3
+
+```{r}
+full_join(fraud, transaction, by = "transaction_id")
+```
+
+There are 10 000 rows in the data. This means that all fraud details have corresponding transaction details. There are no duplicated rows so no fraud detail rows have more than one transaction detail row. Similarly, there are no fraud detail rows which are missing transaction detail rows.
+
+#Answer 4
+
+I want to return rows from the first table (card) with matching rows in the second (transaction). AND only return the rows from the first table (card) once.
+
+I will use semi_join().
+
+```{r}
+semi_join(card, transaction, by = c("card_number" = "credit_card_id"))
+```
+
+#1.4 tidyr
+
+#Answer 5
+
+```{r}
+hat_observations <- read_csv("data/hat_observations.csv") %>% 
+  separate(observation, c("hat_colour", "hat_type"), sep = ",")
+
+hat_observations
+```
+
+#Answer 6
+
+```{r}
+#unite day, month and year into date column
+hat_observations_date <- hat_observations %>% 
+  unite(col = date, c("day", "month", "year"), sep = "/")
+
+#date most berets were seen
+hat_observations_date %>% 
+  filter(hat_type == "beret") %>% 
+  group_by(date) %>%    #this selects all berets on each date!
+  summarise(total = sum(observation_count)) %>%  #this gives the total observations on each date
+  slice_max(observation_count)
+
+#if asked about date, good idea to check distinct(date) to see how many obs are seen.
+```
+
+On the 18th June 2018 the most berets were seen (9 in total). And all of these were white.
+(I am not sure if the question was looking for the date for the most observations for all colours of berets?)
+
+#Extension
+#2.1 Joins
+#Answer 1
+Looking at the table in the question:
+
+I want the number of observations (rows) from fraud.
+The columns from card joined to columns from customer joined to columns from transaction and then the last column from fraud.
+
+I should have done this as a series of inner joins. this only worked because tables have a relationship of 1:1.
+
+```{r}
+credit_combined <- card_customer %>% 
+  left_join(transaction, by = c("card_number" = "credit_card_id")) %>% 
+  inner_join(fraud, by="transaction_id")
+credit_combined
+```
+Also note:
+SQL databases are more robust than the joining functions in R.
+You are not allowed to have entries with a different foreign key to the primary key found in the other table.
+This is called referential integrity.
+
+#2.2 tidyr
+#Answer 2
+
+I did this in two parts and then checked to see if I could combine the code.
+
+```{r}
+#read in exam_scores
+exam_scores <- read_csv("data/exam_scores.csv")
+exam_scores
+
+#make the data long format
+exam_scores_long <- exam_scores %>% 
+  pivot_longer(
+    cols = starts_with("exam"), 
+    names_to = "exam_question",
+    values_to = "score")
+exam_scores_long
+
+#removing superfluous information from values in exam_question
+
+exam_scores_formatted <- exam_scores_long %>% 
+  separate(exam_question, c("to_delete", "exam_question"), sep = "_Q") %>% 
+  select(!to_delete)
+exam_scores_formatted
+
+#Put above into one code chunk as a trial
+exam_scores_tidy <- exam_scores %>% 
+  pivot_longer(
+    cols = starts_with("exam"), 
+    names_to = "exam_question",
+    values_to = "score") %>% 
+  separate(exam_question, c("to_delete", "exam_question"), sep = "_Q") %>% 
+  select(!to_delete)
+exam_scores_tidy
+```
+
