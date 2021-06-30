@@ -126,17 +126,37 @@ Write a function which checks if two vectors have the same elements.
 
 
 ```{r}
+vector_checker <- function(x, y){
+    if(all(x==y)){
+      return("Exactly the same")
+    }
+    if(all(sort(x)==sort(y))){
+      return("The same")
+    }else{
+    return("Different")
+    }
+}
+#the above "works" but it does return 3 warnings...
+
+#checks
 x <- c(4, 6, 5)
 y <- c(5, 6, 4)
+vector_checker(x, y)
 
-vector_checker <- function(x, y){
-  sort(x)
-  sort(y)
-  if(all(x, y) == TRUE){
-    return("Exactly the same")
-  }
-}
+x <- c(10, 14, 67)
+y <- c(10, 14, 67)
+vector_checker(x, y)
 
+x <- c(4, 6)
+y <- c(5, 6, 4)
+vector_checker(x, y)
+
+x <- c(TRUE, TRUE, FALSE)
+y <- c(TRUE, FALSE, TRUE)
+vector_checker(x, y)
+
+x <- c("Once", "Upon")
+y <- c("A", "Time")
 vector_checker(x, y)
 ```
 
@@ -150,6 +170,18 @@ vector_checker(x, y)
 Write code that prints a multiplication table for numbers up to 12. i.e. there will be 12 rows and 12 columns, and each element should be the row number multiplied by the column number.
 
 *From: https://adriann.github.io/programming_problems.html*
+
+```{r}
+
+for(i in 1:12){
+  matrix(
+    data = print(c(1*i, 2*i, 3*i, 4*i, 5*i, 6*i, 7*i, 8*i, 9*i, 10*i, 11*i, 12*i)),
+    nrow = 12,
+    ncol = 12)
+}
+
+```
+
 
 <br>
 
