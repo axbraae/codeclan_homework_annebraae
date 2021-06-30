@@ -1,0 +1,168 @@
+---
+title: "Programming in R homework assignment"
+output: html_notebook
+---
+
+**Question 1.** \
+Find the weather forecast for the next three days online. Create a list of lists in which each inner list should be labelled with the name of the day of the week. Each inner list should contain named elements telling you the temperature, chance of rain and wind speed.
+
+Weather forecast taken from Met Office.
+
+```{r}
+weather_forecast <- list(
+  "Thursday" = list(temperature_c = 17,
+                    rain_chance = 5,
+                    wind_speed = 7),
+  "Friday" = list(temperature_c = 19,
+                  rain_chance = 10,
+                  wind_speed = 7),
+  "Saturday" = list(temperature_c = 19,
+                    rain_chance = 10,
+                    wind_speed = 5.5)
+)
+```
+
+
+<br>
+
+**Question 2.** \
+Using the list you've just made find:
+
+  i. The chance of rain tomorrow
+```{r}
+weather_forecast$Thursday$rain_chance
+```
+5% chance of rain tomorrow.
+
+  ii. The wind speed on the day after tomorrow
+```{r}
+weather_forecast$Friday$wind_speed
+```
+7mph wind speed on the day after tomorrow (Friday).
+
+  iii. The temperature tomorrow.
+```{r}
+weather_forecast$Thursday$temperature_c
+```
+It will be 17 degrees Centigrade tomorrow.
+
+<br>
+
+**Question 3.** \
+Find a 14 day forecast online and create a matrix of the forecasts for temperature, where each week is one row and columns correspond to days.
+
+You will want to give a name to the matrix you create.
+
+Weather forecast taken from the weather network.
+
+```{r}
+two_wk_forecast <- matrix(
+  data = c(18, 20, 20, 19, 19, 19, 20, 19, 20, 19, 19, 19, 19, 19),
+  nrow = 2,
+  ncol = 7,
+  byrow = TRUE,
+  dimnames = list(c("week1", "week2"),
+                  c("Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"))
+)
+```
+
+
+<br>
+
+**Question 4.** \
+From the matrix you just made select:
+
+  i. The third day of the second week
+```{r}
+two_wk_forecast[2,3]
+```
+  ii. The whole second week
+```{r}
+two_wk_forecast[2, ]
+```
+  iii. The first, third and fifth days in both weeks.
+
+```{r}
+two_wk_forecast[ , c(1,3,5)]
+```
+
+<br>
+
+**Question 5.** \
+Write a function that pre-appends "The answer is: " to any character input, while for numeric input, it either just returns the number for numbers less than 10, or divides the number by 10 for numbers greater than 10. For anything else return "Invalid input".
+
+```{r}
+answer_formatter <- function(x){
+  if (is.character(x) == TRUE){
+    return((paste("The answer is: ", x, sep = "")))
+  }
+  if (is.numeric(x) == TRUE){
+    if(x < 10){
+      return(x)
+    }else{
+      return(x/10)
+    }
+  }
+  else{return("Invalid input")}
+}
+
+#checks
+answer_formatter(5)
+answer_formatter(0.5)
+answer_formatter(58)
+answer_formatter(789.9)
+answer_formatter("always sunny.")
+```
+
+
+<br>
+
+**Question 6.** \
+Write a function which checks if two vectors have the same elements. 
+
+* If they have the same elements in the same order, return "Exactly the same"
+* If they have the same elements but in a different order, return "The same"
+* If they don't have the same elements, return "Different".
+
+
+```{r}
+x <- c(4, 6, 5)
+y <- c(5, 6, 4)
+
+vector_checker <- function(x, y){
+  sort(x)
+  sort(y)
+  if(all(x, y) == TRUE){
+    return("Exactly the same")
+  }
+}
+
+vector_checker(x, y)
+```
+
+
+
+# Extension
+
+<br>
+
+**Question 7.** \
+Write code that prints a multiplication table for numbers up to 12. i.e. there will be 12 rows and 12 columns, and each element should be the row number multiplied by the column number.
+
+*From: https://adriann.github.io/programming_problems.html*
+
+<br>
+
+**Question 8.** \
+Write a function that takes a vector, and creates a text art histogram, like the one below.
+
+You may want to use the function `cat()`. This is similar to `print()`, but prints directly, without vector markers. You can also include newlines `"\n"` when using `cat()`.
+
+```
+1 | ***
+2 | *
+3 | *******
+4 | ****
+5 | **
+```
+
