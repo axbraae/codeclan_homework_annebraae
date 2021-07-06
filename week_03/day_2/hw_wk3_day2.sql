@@ -165,12 +165,11 @@ How many of the employees serve on one or more committees?
 */
 
 SELECT
-FROM employees_committee
+	COUNT(DISTINCT employee_id)
+FROM employees_committees;
 
 /*
 Question 6.
 How many of the employees do not serve on a committee?
-
-
-Hints
+Hints Could you use a join and find rows without a match in the join?
 */
