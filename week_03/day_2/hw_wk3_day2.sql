@@ -162,11 +162,12 @@ HAVING ((CAST(charge_cost AS INTEGER))*(COUNT(e.id))) > 5000;
 
 Question 5.
 How many of the employees serve on one or more committees?
+*/
 
+SELECT
+FROM employees_committee
 
-Hints
-
-
+/*
 Question 6.
 How many of the employees do not serve on a committee?
 
