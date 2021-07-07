@@ -3,12 +3,6 @@
 --Are there any pay_details records lacking both a local_account_no and iban number?
 
 SELECT 
-	local_account_no,
-	iban 
-FROM pay_details 
-WHERE local_account_no IS NULL AND iban IS NULL;
-
-SELECT 
 	COUNT(*)
 FROM pay_details 
 WHERE local_account_no IS NULL AND iban IS NULL;
@@ -101,13 +95,13 @@ GROUP BY pension_enrol;
 SELECT 
 	MAX(salary)
 FROM employees 
-WHERE fte_hours = 1 
-	AND department = 'Engineering';
+WHERE fte_hours = 1 AND department = 'Engineering';
 
 --Q10
---Get a table of country, number of employees in that country, and the average salary of employees 
---in that country for any countries 
---in which more than 30 employees are based. Order the table by average salary descending.
+--Get a table of country, number of employees in that country, 
+--and the average salary of employees in that country 
+--for any countries in which more than 30 employees are based. 
+--Order the table by average salary descending.
 
 SELECT
 	country,
@@ -178,7 +172,7 @@ SELECT
 FROM employees 
 WHERE first_name IS NOT NULL
 GROUP BY first_name 
-HAVING COUNT(id) >1
+HAVING COUNT(id) > 1
 ORDER BY COUNT(id) DESC,
 first_name ASC;
 
@@ -191,3 +185,84 @@ SELECT
 	SUM(CAST(grade = 1 AS INTEGER))/CAST(COUNT(id) AS REAL) AS proportion_of_grade_1
 FROM employees
 GROUP BY department;
+
+-- I tried to use a ROUND in front of the SUM(CAST...) line to return a decimal to 2 digits
+-- but this didn't work... Is there a way to return a rounded value here?
+
+-- EXTENSION ------------------------------------------------
+--Q17
+--Get a list of the id, first_name, last_name, department, salary and fte_hours of employees 
+--in the largest department. 
+--Add two extra columns showing the ratio of each employee’s salary 
+--to that department’s average salary, 
+--and each employee’s fte_hours to that department’s average fte_hours.
+
+
+WITH large_dept_details(department, avg_salary, avg_fte_hours) AS(
+SELECT 
+	department,
+	AVG(salary) AS avg_salary,
+	AVG(fte_hours) AS avg_fte_hours
+FROM employees
+GROUP BY department
+ORDER BY department DESC NULLS LAST 
+LIMIT 1
+)
+SELECT
+	e.id,
+	e.first_name,
+	e.last_name,
+	e.department,
+	e.salary,
+	e.fte_hours,
+	e.salary/ldd.avg_salary AS ratio_salary_to_dept_salary,
+	e.fte_hours/ldd.avg_fte_hours AS ratio_fte_hours_to_dept_hours
+FROM employees AS e LEFT JOIN large_dept_details AS ldd 
+	ON e.department = ldd.department
+WHERE e.department = ldd.department;
+
+--Q17 EXTENSION
+-- how to deal with ties
+	
+WITH large_dept_details(department, avg_salary, avg_fte_hours) AS(
+SELECT 
+	department,
+	AVG(salary) AS avg_salary,
+	AVG(fte_hours) AS avg_fte_hours
+FROM employees
+GROUP BY department
+ORDER BY department DESC NULLS LAST 
+LIMIT 1
+--FETCH FIRST 1 ROWS WITH TIES -- trying to add this but it does not work.
+)
+SELECT
+	e.id,
+	e.first_name,
+	e.last_name,
+	e.department,
+	e.salary,
+	e.fte_hours,
+	e.salary/ldd.avg_salary AS ratio_salary_to_dept_salary,
+	e.fte_hours/ldd.avg_fte_hours AS ratio_fte_hours_to_dept_hours
+FROM employees AS e LEFT JOIN large_dept_details AS ldd 
+	ON e.department = ldd.department
+WHERE e.department = ldd.department;	
+
+-- from the notes: A better approach in this case would involve two queries:
+--Write a first query to find the maximum or minimum value in a column as required
+--Use this maximum or minimum value in the WHERE clause of a second query 
+--to find all rows with that value
+
+--Q18
+ /* Have a look again at your table for MVP question 8. 
+ * It will likely contain a blank cell for the row relating to employees with ‘unknown’ pension enrollment status. 
+ * This is ambiguous: it would be better if this cell contained ‘unknown’ or something similar. 
+ * Can you find a way to do this, perhaps using a combination of COALESCE() and CAST(), or a CASE statement?*/
+
+SELECT
+	CASE WHEN (CAST(pension_enrol AS VARCHAR)) IS NULL 
+		 THEN 'unknown'
+	ELSE CAST(pension_enrol AS VARCHAR) END,
+	COUNT(id)
+FROM employees
+GROUP BY pension_enrol;
