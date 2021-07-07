@@ -248,11 +248,6 @@ FROM employees AS e LEFT JOIN large_dept_details AS ldd
 	ON e.department = ldd.department
 WHERE e.department = ldd.department;	
 
--- from the notes: A better approach in this case would involve two queries:
---Write a first query to find the maximum or minimum value in a column as required
---Use this maximum or minimum value in the WHERE clause of a second query 
---to find all rows with that value
-
 --Q18
  /* Have a look again at your table for MVP question 8. 
  * It will likely contain a blank cell for the row relating to employees with ‘unknown’ pension enrollment status. 
