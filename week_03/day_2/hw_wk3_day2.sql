@@ -173,3 +173,8 @@ Question 6.
 How many of the employees do not serve on a committee?
 Hints Could you use a join and find rows without a match in the join?
 */
+
+SELECT 
+	COUNT(ec.employee_id IS NULL)
+FROM employees AS e LEFT JOIN employees_committees AS ec
+	ON e.id = ec.employee_id;
