@@ -261,3 +261,24 @@ SELECT
 	COUNT(id)
 FROM employees
 GROUP BY pension_enrol;
+
+--Q19
+
+SELECT 
+	e.first_name, e.last_name, e.email, e.start_date 
+FROM employees AS e INNER JOIN employees_committees AS ec 
+	ON e.id = ec.employee_id INNER JOIN committees AS c 
+	ON ec.committee_id =c.id
+WHERE c.name = 'Equality and Diversity'
+ORDER BY start_date ASC NULLS LAST;
+
+--Q20
+SELECT
+	CASE 
+	WHEN e.salary IS NULL THEN 'none'
+	WHEN e.salary <40000 THEN 'low'
+	WHEN e.salary >= 40000 THEN 'high'
+	END AS salary_class,
+	e.first_name, e.last_name, e.email, e.start_date 
+FROM employees AS e INNER JOIN employees_committees AS ec 
+GROUP BY salary_class
