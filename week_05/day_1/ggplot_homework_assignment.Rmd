@@ -222,7 +222,7 @@ ggplot() +
   scale_colour_manual(values = col_scheme[1:4]) +
   scale_y_continuous(labels = scales::comma) +
   labs(title = "\nSteps per Device over 24 hours",
-       subtitle = "Steps measured by devices worn by the same five people\n",
+       subtitle = "Steps measured per device for the same five people\n",
        x = "\nTime (in hours)", y = "Steps\n", colour = "Company") +
   qb_theme()
 ```
