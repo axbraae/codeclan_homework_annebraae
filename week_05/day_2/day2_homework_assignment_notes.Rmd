@@ -1,0 +1,237 @@
+---
+title: "Intro to ggplot2 homework assignment"
+author: "Anne Braae"
+date: "20/07/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Question 1.**  
+
+Load in the libraries you need, and look at the `backpack` data. Take note of variable names and dimensions. 
+
+Load libraries
+```{r}
+library(tidyverse)
+library(CodeClanData)
+```
+Load data and get dimensions
+```{r}
+backpack <- backpack
+head(backpack)
+summary(backpack)
+dim(backpack)
+names(backpack)
+```
+The backpack data set contains 100 observations (rows) and 9 variables (columns).
+The columns types appear to be classed correctly. Note that the major and sex columns are factor character columns.
+
+
+**Question 2.**
+
+What is the distribution of backpack weights that students are carrying? Choose an appropriate graph to show the distribution. 
+
+For this I would use a histogram.
+
+```{r}
+ggplot(backpack) +
+  aes(x = backpack_weight) +
+  geom_histogram(fill = "#8da0cb", colour = "white") +
+  labs(title = "Weight of backpacks carried by students\n",
+       x = "Backpack Weight",
+       y = "Number of Backpacks") +
+  theme_minimal()
+```
+
+Students carry backpacks which range in weight from 2 to 35 kg. (I do not know what unit this is I will assume kg.) Most students backpacks weigh a little over 10kg.
+
+**Question 3.**  
+
+Are there differences in backpack weight between sex?   
+
+```{r}
+ggplot(backpack) +
+  aes(x = backpack_weight, fill = sex) +
+  geom_histogram() +
+  scale_fill_brewer(palette = "Set2") + 
+  labs(title = "Weight of backpacks carried by students\n",
+       x = "Backpack Weight",
+       y = "Number of Backpacks",
+       fill = "Gender") +
+  theme_minimal()
+```
+
+Colouring the graph by gender I do not see a difference in the weights of backpacks carried by male and female students. The heaviest backpack (35kg) is carried by a male. There seem to be more female students with backpacks in general, but the distribution of backpack weight between male and female students is comparable.
+
+**Question 4.**  
+
+What is the relationship between body weight and backpack weight?
+
+I am going to do a scatter plot for this.
+
+```{r}
+ggplot(backpack) +
+  aes(x = body_weight, y = backpack_weight) +
+  geom_point(colour = "#8da0cb") +
+  labs(title = "Student's Body Weight and Backpack Weight\n",
+       x = "Student Weight (lbs)",
+       y = "Backpack Weight (kg)") +
+  theme_minimal()
+
+```
+I do not see a clear relationship between student weight and backbackweight. On the whole it seems that students that weigh less do carry lighter backbacks, but I cannot see a strong trend. I am going to try convert the student weight from pounds to kg and see if that changes anything in the data.
+
+```{r}
+backpack %>% 
+  mutate(body_weight = body_weight/2.205) %>% 
+ggplot() +
+  aes(x = body_weight, y = backpack_weight) +
+  geom_point(colour = "#8da0cb") +
+  labs(title = "Student's Body Weight and Backpack Weight\n",
+       x = "Student Weight (kg)",
+       y = "Backpack Weight (kg)") +
+  theme_minimal()
+```
+
+Unsurprisingly using the same unit has no change in the data. Although I would prefer to present the same units on both axis if I had a choice
+
+**Question 5.**  
+
+Is this relationship different between men and women? Choose an appropriate plot and interpret your findings.  
+
+```{r}
+ggplot(backpack) +
+  aes(x = body_weight, y = backpack_weight, colour = sex) +
+  geom_point() +
+  scale_colour_brewer(palette = "Set2") +
+  labs(title = "Student's Body Weight and Backpack Weight\n",
+       x = "Student Weight (lbs)",
+       y = "Backpack Weight (kg)",
+       colour = "Gender") +
+  theme_minimal()
+```
+Colouring the scatterplot by gender reveals that it is male students who tend to carry the heavier backpacks and who are also heavier themselves. All of the heaviest backpacks are carried by males and all of the lightest backpacks are carried by females.
+
+
+**Question 6.**  
+
+What **proportion** of students report back pain?   
+
+```{r}
+backpack %>% 
+  mutate(student = "student",
+         back_problems = as.logical(back_problems)) %>% # instead of making this can use x = ""
+ggplot() +
+  aes(x = student, fill = back_problems) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Paired") +
+  labs(title = "Proportion of students reporting back pain\n",
+       x = "",
+       y = "Proportion",
+       fill = "Back Problems") +
+  theme_minimal()
+```
+About 30% of all students report back pain.
+
+Answer from Aileen:
+```{r}
+ggplot(backpack) + 
+  aes(x = "", fill = backpain_labelled) + 
+  geom_bar(position = "fill") +
+  scale_fill_manual(values=c('#f0ca41', '#5022bd'))
+```
+
+
+**Question 7.**  
+
+Is this proportion different between men and women? 
+
+```{r}
+backpack %>% 
+  mutate(back_problems = as.logical(back_problems)) %>% 
+ggplot() +
+  aes(x = sex, fill = back_problems) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Paired") +
+  labs(title = "Proportion of students reporting back pain\n",
+       x = "",
+       y = "Proportion",
+       fill = "Back Problems") +
+  theme_minimal()
+```
+There are differences between male and female students when it comes to reporting back pain. About 40% of female students report back pain compared with around 17% of male students who report back pain.
+
+**Question 8.**  
+
+Now you've investigated your data separately, create plots to describe the relationship between backpack weight, body weight, gender and reported backpain.
+
+Try both `backpack_weight` and `body_weight` as well as the `ratio`.   
+
+*Hint: faceting would be useful here*.   
+
+```{r}
+backpack %>% 
+  mutate(back_problems = if_else(back_problems == 1, "back pain", "no pain")) %>% 
+ggplot() +
+  aes(x = body_weight, y = backpack_weight, size = ratio, colour = ratio) +
+  geom_point() +
+  facet_grid(back_problems~sex) +
+  #scale_fill_brewer(palette = "YlGnBu") + I can't get colour working here :(
+  labs(title = "Student's Body Weight, Backpack Weight and Back Pain\n",
+       x = "Student Weight (lbs)",
+       y = "Backpack Weight (kg)",
+       size = "",
+       colour = "Ratio") +
+  theme_minimal() +
+  #increase space between facet graphs
+  theme(panel.spacing = unit(2, "lines"))
+```
+Looking at the number of data points in the graphs of students reporting back pain (top left hand side graph and top right hand side graph), more female students than male students reported back pain. These students reporting pain appear to have larger ratios of back pack to body weight when compared to the graphs below for students reporting no pain. The students reporting no back pain (bottom right and left hand side graphs) contain the smallest ratios of backpack to body weight.
+
+# Extensions
+
+<br>
+
+**Question 1.** 
+
+Does reported backpain differ across the year groups? Ignore year 0 in your data.  
+
+```{r}
+backpack %>% 
+  filter(year != 0) %>% 
+  mutate(back_problems = as.logical(back_problems))%>% 
+ggplot() +
+  aes(x = year, fill = back_problems) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Paired") +
+  labs(title = "Proportion of students reporting back pain\n",
+       x = "",
+       y = "Proportion",
+       fill = "Back Problems") +
+  theme_minimal()
+```
+
+The number of students reporting back pain does differ over the years. No students are reporting back pain in year 6 and around 13% of students are reporting back pain in year 2.
+
+**Question 2.** 
+
+Is there a difference between how heavy the bags those in different years carry?
+
+```{r}
+backpack %>% 
+  filter(year != 0) %>%
+  group_by(year) %>% 
+  summarise(avg_bag_weight = mean(backpack_weight)) %>% 
+  ggplot() +
+  aes(x = year, y = avg_bag_weight) +
+  geom_col(fill = "#8da0cb") +
+  labs(title = "Average Backpack Weight per year\n",
+       x = "Year",
+       y = "Average Backpack Weight") +
+  theme_minimal()
+```
+
+Students in year 6 carry backpacks which weigh a lot less than students in the other years. This could be the reason they are not reporting any backpain at all. For students in year 2, they carry on average the same weight backpacks as the other years.
