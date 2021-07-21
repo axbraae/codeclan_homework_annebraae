@@ -14,6 +14,12 @@ ui <- fluidPage(
     titlePanel(tags$h1("Olympics Medals Summary")),
     
     navbarPage("",
+               tabPanel("Overview",
+                   column(6, tableOutput("summary_table")
+                   ),
+                   column(12, img(src = "https://upload.wikimedia.org/wikipedia/commons/8/82/Olympic_Rings_black.svg",
+                                  height = 155, width = 320))
+               ),
                tabPanel("Five Country Medal Comparison",
                         fluidRow(
                  column(6, radioButtons(inputId = "season_input",
@@ -99,6 +105,16 @@ server <- function(input, output) {
                 panel.border = element_rect(color = "black", fill = NA, size = 1)
             )
     })
+    output$summary_table <- renderTable({
+        head(
+        olympics_overall_medals %>% 
+            summarise("Total Countries" = n_distinct(team),
+                      "Total Gold Medals" = sum(medal == "Gold"),
+                      "Total Silver Medals" = sum(medal == "Silver"),
+                      "Total Bronze Medals" = sum(medal == "Bronze")))
+    },
+    bordered = TRUE,
+    align = 'l')
 }
 
 # Run the application 
