@@ -20,7 +20,7 @@ ui <- fluidPage(
                               tags$h4("Summer or Winter Olympics"),
                               choices = c("Summer", "Winter")
                               )
-                         ),
+                        ),
                  column(6, radioButtons(inputId = "medal_input",
                               tags$h4("Medal Type"),
                               choices = c("Gold", "Silver", "Bronze")
@@ -42,10 +42,11 @@ ui <- fluidPage(
                               #choices = c("Summer", "Winter"))
                         #),
                  column(12, plotOutput("medal_plot")
-                        )
+                        ),
                  )
         ),
         tabPanel("The Olympic Website",
+                 "To link out to the Olympic Website: ",
                  tags$a("Click here", href = "https://www.olympics.com/")
         )
     )
