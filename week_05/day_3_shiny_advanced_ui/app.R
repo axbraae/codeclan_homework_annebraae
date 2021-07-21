@@ -36,7 +36,8 @@ ui <- fluidPage(
                              "Which team?",
                              choices = all_teams)
                         ),
-                 #column(6, radioButtons(inputId = "season_input", #removed for now
+                 #removing for now because I will try faceting the graph
+                 #column(6, radioButtons(inputId = "season_input", 
                               #"Summer or Winter Olympics",
                               #choices = c("Summer", "Winter"))
                         #),
@@ -71,6 +72,7 @@ server <- function(input, output) {
                     "Silver" = "gray75",
                     "Bronze" = "orange"
                 )) +
+            theme_minimal() +
             theme(
                 legend.position = "none"
             )
@@ -89,7 +91,12 @@ server <- function(input, output) {
                     "Gold" = "gold",
                     "Silver" = "gray75",
                     "Bronze" = "orange"
-                ))
+                )) +
+            theme_minimal() +
+            theme(
+                panel.spacing = unit(.05, "lines"),
+                panel.border = element_rect(color = "black", fill = NA, size = 1)
+            )
     })
 }
 
