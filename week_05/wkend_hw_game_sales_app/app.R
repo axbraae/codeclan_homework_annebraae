@@ -1,3 +1,6 @@
+#Game Finder app
+#App to help users pick a game by genre, rating, developer or platform
+
 #load helpers script
 source("helpers.R")
 
@@ -68,41 +71,42 @@ server <- function(input, output) {
             filter(genre == input$genre_input,
                    rating == input$rating_input)
         })
-    
+
+#shows the user which developer makes the most games for the selected genre
+#useful as this information can be used to filter the game names table
     output$developer_plot <- renderPlot({
         filtered_games() %>% 
             ggplot() +
             aes(x = genre, fill = developer) +
-            geom_bar() +
-            theme_minimal()
+            geom_bar(alpha = 0.6) +
+            theme_minimal() +
+            labs(title = input$genre_input,
+                 subtitle = "Game Developers",
+                 x = "", fill = "Developers")
     })
-    
+
+#user and critic scores indicate the popularity of the selected game genre
+#indicates how much the user will enjoy the games in their chosen genre 
     output$score_plot <- renderPlot({
         filtered_games() %>% 
             ggplot() +
             aes(x = score, fill = scored_by) +
             geom_density(alpha = 0.6) +
-            theme_minimal()
+            theme_minimal() +
+            labs(title = input$genre_input,
+                 subtitle = "Scores from critics and users",
+                 x = "", fill = "Score")
     })
     
     output$names_table <- DT::renderDataTable({
-        game_table <- filtered_games() %>% 
-            select(name, year_of_release, publisher, developer)
-        
-            if(developer == input$developer_input)
-                {
-                game_table <- game_table %>% 
-                filter(developer == input$developer_input) 
-                    }
-            if(platform == input$platform_input)
-                {
-                game_table <- game_table %>% 
-                filter(developer == input$developer_input) 
-            }  
-        
-           DT::datatable(game_table, options = list(dom = "t"), style = "bootstrap") 
+        game_sales %>% 
+            filter(genre == input$genre_input,
+                   rating == input$rating_input,
+                   developer == input$developer_input,
+                   platform == input$platform_input) %>% 
+            select(name, year_of_release, publisher, developer) %>% 
+            DT::datatable(options = list(dom = "t"), style = "bootstrap") 
     })
-    
 
 }
 
