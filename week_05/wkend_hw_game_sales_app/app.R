@@ -21,11 +21,7 @@ ui <- fluidPage(
                               )
                ),
 
-<<<<<<< HEAD
         #column(12, plotOutput("developer_plot", height = "300px")),
-=======
-        column(12, plotOutput("developer_plot", height = "300px")),
->>>>>>> parent of f878a21 (move score_plot rhs)
         column(12, plotOutput("score_plot", height = "175px"))
       )
     ),
@@ -56,13 +52,8 @@ ui <- fluidPage(
                                 )
                  )
           )
-<<<<<<< HEAD
         ),
         column(4, offset = 4, plotOutput("developer_plot", height = "275px"))
-=======
-        )
-        )
->>>>>>> parent of f878a21 (move score_plot rhs)
         ),
       column(12, br()),
       column(12, DT::dataTableOutput("names_table")
