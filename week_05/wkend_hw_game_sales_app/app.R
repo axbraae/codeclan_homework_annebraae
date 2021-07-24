@@ -20,7 +20,7 @@ ui <- fluidPage(
                ),
 
         column(12, plotOutput("developer_plot", height = "300px")),
-        column(12, plotOutput("score_plot", height = "175px"))
+       # column(12, plotOutput("score_plot", height = "175px"))
       )
     ),
     mainPanel(
@@ -43,7 +43,8 @@ ui <- fluidPage(
           )
           )
         )
-        )
+        ),
+        column(4, offset = 4, plotOutput("score_plot", height = "175px"))
         ),
 
         column(12, DT::dataTableOutput("names_table")
