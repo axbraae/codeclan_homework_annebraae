@@ -4,10 +4,8 @@ library(shiny)
 library(shinythemes)
 
 #load data
-game_sales <- CodeClanData::game_sales
-
 #convert user scores to critic score scale, combine critic and user scores
-game_sales_longer <- game_sales %>% 
+game_sales <- CodeClanData::game_sales %>% 
   mutate(user_score = user_score*10) %>% 
   pivot_longer(cols = ends_with("_score"),
                names_to = "scored_by",
@@ -22,7 +20,7 @@ game_sales_longer <- game_sales %>%
 
 # critic_user_scores_density_plot -----------------------------------------
 
-game_sales_longer %>% 
+game_sales %>% 
   filter(genre == "Racing") %>% 
   #filter(developer == "Nintendo") %>% 
   #filter(platform == "Wii") %>% 
@@ -35,7 +33,7 @@ ggplot() +
 
 # sales_year_genre_plot ---------------------------------------------------------
 
-game_sales_longer %>% 
+game_sales %>% 
   filter(genre == "Sports") %>% 
   #filter(developer == "Nintendo") %>% 
   #filter(platform == "Wii") %>% 
@@ -48,7 +46,7 @@ game_sales_longer %>%
 
 # game_genre_developer_plot ---------------------------------------------------------
 
-game_sales_longer %>% 
+game_sales %>% 
   filter(genre == "Sports") %>% 
   #filter(developer == "Nintendo") %>% 
   #filter(platform == "Wii") %>% 
