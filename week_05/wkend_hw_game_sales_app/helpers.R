@@ -1,6 +1,7 @@
 #load libraries
 library(tidyverse)
 library(shiny)
+library(shinythemes)
 
 #load data
 game_sales <- CodeClanData::game_sales

@@ -4,6 +4,8 @@ source("helpers.R")
 # ui ----------------------------------------------------------------------
 
 ui <- fluidPage(
+  theme = shinytheme("slate"),
+  
   titlePanel("Game Finder"),
   
   sidebarLayout(
@@ -19,8 +21,8 @@ ui <- fluidPage(
                               )
                ),
 
-        column(12, plotOutput("developer_plot", height = "300px")),
-       # column(12, plotOutput("score_plot", height = "175px"))
+        #column(12, plotOutput("developer_plot", height = "300px")),
+        column(12, plotOutput("score_plot", height = "175px"))
       )
     ),
     mainPanel(
@@ -31,23 +33,30 @@ ui <- fluidPage(
                                inline = TRUE
                                ),
                
-        fluidRow(  
+        fluidRow(
+          br(),
+          br(),
+          br(),
           column(6, selectInput("developer_input",
                                 "Developer",
-                                choices = unique(game_sales$developer)
-          )
-          ),
-          column(4, selectInput("platform_input",
+                                choices = c("Select one" = "",
+                                            unique(game_sales$developer)
+                                            )
+                                )
+                 ),
+          column(6, selectInput("platform_input",
                                 "Platform",
-                                choices = unique(game_sales$platform)
+                                choices = c("Select one" = "",
+                                            unique(game_sales$platform)
+                                            )
+                                )
+                 )
           )
-          )
-        )
         ),
-        column(4, offset = 4, plotOutput("score_plot", height = "175px"))
+        column(4, offset = 4, plotOutput("developer_plot", height = "275px"))
         ),
-
-        column(12, DT::dataTableOutput("names_table")
+      column(12, br()),
+      column(12, DT::dataTableOutput("names_table")
         )
       )
     )
@@ -100,7 +109,7 @@ server <- function(input, output) {
              developer == input$developer_input,
              platform == input$platform_input) %>% 
       select(name, year_of_release, publisher, developer) %>% 
-    DT::datatable(options = list(dom = 't')) 
+    DT::datatable(options = list(dom = "t"), style = "bootstrap") 
   })
 
 }
