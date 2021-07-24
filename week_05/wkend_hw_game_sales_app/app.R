@@ -97,7 +97,8 @@ server <- function(input, output) {
                  subtitle = "Scores from critics and users",
                  x = "", fill = "Score")
     })
-    
+
+#the table generates a list of games selected for the user to play
     output$names_table <- DT::renderDataTable({
         game_sales %>% 
             filter(genre == input$genre_input,
