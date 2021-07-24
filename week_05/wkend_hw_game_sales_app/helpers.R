@@ -1,5 +1,6 @@
 #load libraries
 library(tidyverse)
+library(shiny)
 
 #load data
 game_sales <- CodeClanData::game_sales
@@ -21,7 +22,7 @@ game_sales_longer <- game_sales %>%
 # critic_user_scores_density_plot -----------------------------------------
 
 game_sales_longer %>% 
-  filter(genre == "Sports") %>% 
+  filter(genre == "Racing") %>% 
   #filter(developer == "Nintendo") %>% 
   #filter(platform == "Wii") %>% 
   #filter(rating == "E") %>% 
