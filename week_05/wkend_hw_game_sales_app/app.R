@@ -98,7 +98,7 @@ server <- function(input, output) {
                  x = "", fill = "Score")
     })
 
-#the table generates a list of games selected for the user to play
+#the table generates a list of games the user to play based on user selections
     output$names_table <- DT::renderDataTable({
         game_sales %>% 
             filter(genre == input$genre_input,
