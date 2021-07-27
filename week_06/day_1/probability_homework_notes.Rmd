@@ -1,0 +1,203 @@
+---
+title: "Probability Homework"
+output: html_notebook
+---
+
+#1 MVP - The titanic
+
+Load in the libraries
+```{r, message=FALSE, warning=FALSE}
+library(prob)
+library(gtools)
+library(tidyverse)
+```
+
+Load in the data
+
+```{r}
+titanic <- read_csv("data/titanic.csv")
+```
+
+Have a look at distinct class variables
+
+```{r}
+titanic %>% 
+  distinct(class)
+```
+7 distinct classes, 3 for passengers (1st, 2nd and 3rd) and the rest for the crew.
+
+Add a crew column to filter the data into passengers and crew.
+
+```{r}
+passengers <- c("3rd", "2nd", "1st")
+
+titanic <- titanic %>% 
+  mutate(crew = !class %in% passengers)
+```
+
+### Calculate the conditional probability that crew members were more likely to have survived than passengers. 
+
+prob( survived ∣ crew )
+```{r}
+p_survived_given_crew <- titanic %>% 
+  filter(crew == TRUE) %>% 
+  summarise(p = sum(survived == "yes")/n())
+
+p_survived_given_crew
+```
+
+The probability of surviving GIVEN being crew is 0.237.
+
+Check:
+
+Probability of survival AND being crew:
+```{r}
+p_survival_crew <- titanic %>% 
+  filter(crew == TRUE,
+         survived == "yes") %>% 
+  summarise(p = n()/nrow(titanic))
+p_survival_crew
+```
+
+Probability of being crew:
+```{r}
+p_crew <- titanic %>% 
+  summarise(p = sum(crew == TRUE)/n())
+p_crew
+```
+Probability of survival GIVEN being crew:
+
+```{r}
+p_survival_crew/p_crew
+```
+
+The probability is 0.237 which is the same as the first calculation.
+
+### Calculate the probability that passengers were more likely to have survived than crew
+
+prob( survived ∣ passenger )
+
+```{r}
+p_survived_given_passenger <- titanic %>% 
+  filter(crew == FALSE) %>% 
+  summarise(p = sum(survived == "yes")/n())
+
+p_survived_given_passenger
+```
+
+The probability of surviving GIVEN being a passenger is 0.379. This is a higher probability than the probability of surviving given being crew (0.237).
+
+Therefore the journalist was incorrect and if I have calculated my probability correctly, passengers are more likely to have survived than crew.
+
+ - can also calculate this using the contingency table from the janitor package:
+ 
+```{r}
+library(janitor)
+titanic %>%
+  tabyl(crew, survived) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  adorn_percentages(denominator = "all") %>%
+  adorn_rounding(digits = 4) %>%
+  adorn_title()
+```
+ 
+
+#2 MVP and Extension
+
+#### 1. If I roll a six-sided dice once, what is the probability of getting a number less than 5? <br>
+
+There are 6 outcomes for a dice roll, probability of each outcome is 1/6.
+
+Probability of getting a number less than 5 is 4 out of those 6 possible outcomes. Therefore there is a 2/3 or 0.666 probability of getting a number less than 5.
+
+in code:
+
+```{r}
+one_die <- rolldie(1)
+
+one_die %>% 
+  filter(X1 < 5) %>% 
+  summarise(p = n()/nrow(one_die))
+```
+
+
+#### 2.How many outcomes are there in the sample space of an experiment in which we toss three dice?
+
+Let's use the prob package for this.
+
+```{r}
+rolldie(3) %>% 
+  nrow()
+```
+An alternative:
+```{r}
+rolldie(3) %>% 
+  summarise(size_of_s = n())
+```
+ 
+216 different outcomes for a sample space in which we are throwing 3 dice at once.
+
+#### 3. In an experiment where we roll four dice:
+
+- how many outcomes are in the event where the total of the four dice equals 5, 6 or 7)?
+- what is the probability of this event?
+- what assumptions do we apply in answering part ii?
+
+```{r}
+four_dice <- rolldie(4)
+
+#add a total column
+four_dice <- four_dice %>% 
+  mutate(total = rowSums(.))
+
+#number of outcomes where total = 5,6 or 7
+num_outcome_5_6_7 <- four_dice %>% 
+  filter(total >= 5,
+         total <= 7) %>% 
+  summarise(num_outcome_5_6_7 = n())
+```
+There are 34 outcomes where the total of four dice rolls are equal to 5, 6 or 7.
+
+To answer the probability of the event:
+```{r}
+p_5_6_7 <- num_outcome_5_6_7/nrow(four_dice)
+p_5_6_7
+```
+
+The probability of the event is 0.0262. I am assuming that the dice rolls are independent events as in the outcome for one dice roll does not depend on the outcome of the others. I am assuming that all outcomes are equally likely.
+
+
+#### 4. Five chairs are placed in a row in a room, along with five people of differing height. The people sit down randomly on the chairs. What is the probability that they sit in order of decreasing height, left to right?
+
+Hint This is an arrangement where order matters. Of all the possible arrangements, how many are correct?
+
+*Answer*
+This is a permutation problem.
+I am assuming no replacements - there are only 5 people, once one person has sat down that is it.
+
+All possible arrangements of people in the chairs is 5! = 120 (assuming repeats). However, there is only one arrangement where the order will be correct (excluding repeats, can only be a choice of 1 for the first, 1 for the second etc). 
+
+Therefore there is a 1/120 (0.0083333) probability that the people will be in the correct order.
+
+#### 5. I roll six dice: what is the probability I see the numbers 6, 5, 4, 3, 2 and 1 in order on the dice, left to right?
+
+```{r}
+s_6 <- rolldie(6)
+
+s_6 %>% 
+  filter(isin(s_6, c(6,5,4,3,2,1), ordered = TRUE)) %>% 
+  summarise(p = n()/nrow(s_6))
+```
+
+
+#### what is the probability I see one each of the numbers 6, 5, 4, 3, 2 and 1 on the dice regardless of order?
+####[Hint have a look at the isin() function in the prob package. For example, to filter all rows containing 6, 1, 2 in that order, you could use isin(., c(6, 1, 2), ordered = TRUE)]
+
+```{r}
+s_6 <- rolldie(6)
+
+s_6 %>% 
+  filter(isin(s_6, c(6,5,4,3,2,1), ordered = FALSE)) %>% 
+  summarise(p = n()/nrow(s_6))
+```
+
