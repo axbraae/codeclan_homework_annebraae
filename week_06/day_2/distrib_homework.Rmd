@@ -1,6 +1,8 @@
 ---
 title: "Distributions homework"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 ## MVP
 
@@ -68,7 +70,7 @@ samsung_phone_stats <- samsung_phones %>%
 #plot distribution
 samsung_phones %>% 
   ggplot(aes(x = rating)) +
-  geom_histogram(aes(y = ..density..), col = "white") +
+  geom_histogram(aes(y = ..density..), col = "white", bins = 40) +
   stat_function( #use this to plot the norm distrib over the histogram
     fun = dnorm,
     args = list(
@@ -79,11 +81,11 @@ samsung_phones %>%
   )
 ```
 
-The probability density of ratings for the top brand (Samsung) shows a slight left skew. The fitted normal distribution does not show a good fit to the data. There are some outliers seen in the plot as peaks which are found outside of the fitted normal distribution. <br>
+The probability density of ratings for the top brand (Samsung) shows a slight left skew. The fitted normal distribution does not show a good fit to the data. There are some outliers seen in the plot as grey peaks which are found outside of the fitted normal distribution which is shown as a blue line. <br>
 
-## Question 4
+### Question 4
 
-We can be more quantitative in comparing the distribution of top brand ratings with a normal distribution. You calculated the `mean()` and `sd()` of your distribution in an earlier question. Use these values to calculate the *proportions* of ratings within one-, two- and three standard deviations of the mean. Compare these proportions with those you expect for a normal distribution. 
+__We can be more quantitative in comparing the distribution of top brand ratings with a normal distribution. You calculated the `mean()` and `sd()` of your distribution in an earlier question. Use these values to calculate the *proportions* of ratings within one-, two- and three standard deviations of the mean. Compare these proportions with those you expect for a normal distribution.__
 
 ```{r}
 #function to calculate proportion of data within x sd from the mean
@@ -99,21 +101,46 @@ prop_within_n_sd_calculator <- function(data, n){
 prop_table <- tibble(
 within_1_sd = (pnorm(q = 1) - pnorm(q = -1)),
 within_2_sd = (pnorm(q = 2) - pnorm(q = -2)),
-within_3_sd = (pnorm(q = 3) - pnorm(q = -3))
+within_3_sd = (pnorm(q = 3) - pnorm(q = -3)),
+distrib = "normal_distrib_prop"
 )
 
-#calc proportions from mean
-
+#generate table with proportions from mean from the data
 prop_table_data <- tibble(
 within_1_sd = prop_within_n_sd_calculator(samsung_phones, 1),
 within_2_sd = prop_within_n_sd_calculator(samsung_phones, 2),
-within_3_sd = prop_within_n_sd_calculator(samsung_phones, 3)
+within_3_sd = prop_within_n_sd_calculator(samsung_phones, 3),
+distrib = "data_distrib_prop"
 )
 
-prop_table
-prop_table_data
+final_table <- bind_rows(prop_table, prop_table_data)
+final_table
 ```
 
-This data has a proportion of 0.79 of the data within 1 standard deviations away from the mean, a proportion of 0.92 of the data within 2 standard deviations from the mean and 0.98 of the data within 3 standard deviations of the mean. For an ideally normally distributed dataset with a mean of 0, a proportion of 0.68 of the data should be distributed within 1 standard deviation of the mean, a proportion of 0.95 of the data should be distributed within 2 standard deviations of the mean and a proportion of 0.99 of the data should be distributed within 3 standard deviations of the mean.
+This data has a proportion of 0.79 of the data within 1 standard deviations (sd) away from the mean, a proportion of 0.92 of the data within 2 sd from the mean and 0.98 of the data within 3 sd of the mean. For an ideally normally distributed data with a mean of 0, a proportion of 0.68 of the data should be distributed within 1 sd of the mean, a proportion of 0.95 of the data should be distributed within 2 sd of the mean and a proportion of 0.99 of the data should be distributed within 3 sd of the mean.
 
-Taking all this information together, I would say this suggests that the distribution of the data is not normally distributed.
+Taking all this information together, I would say this suggests that the distribution of the data is not normally distributed. From the standard deviations it appears that the data is distributed across a wider range than a normal distribution would be.
+
+## Extention
+__Investigate the use of the `qqnorm()` plot in R to determine whether data is normally distributed.__
+
+#### Q-Q plot
+The quantile-quantile plot is a visual check of normality. It is a scatterplot of quantiles from the sample distribution on y-axis and theoretical normally distributed quantiles on the x axis.
+<br>
+If the data is normally distributed the Q-Q plot will form a diagonal line which is almost straight.
+<br>
+Quantiles are points in the data below which a known proportion of the data points will fall. 
+<br>
+E.g. For a classic normal distibution with a mean of 0 has the 0.5 quantile or 50th percentile at the point at which half the data will like below 0.
+
+```{r}
+#get the z-score for samsung ratings
+samsung_phones<- samsung_phones %>% 
+  mutate(z_rating = scale(rating))
+
+#generate the Q-Q plot
+qqnorm(samsung_phones$z_rating)
+qqline(samsung_phones$z_rating)
+```
+
+The samsung phone rating data distribution is showing that the points fall on the qqline at the middle of the graph, but deviate at the ends. This indicates that the data has longer tails than would be expected for data from a normally distributed data set. Therefore, the Q-Q plot supports our earlier conclusions that the data is not following a normal distribution.
