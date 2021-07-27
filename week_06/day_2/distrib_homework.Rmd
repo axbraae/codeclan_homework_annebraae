@@ -1,0 +1,119 @@
+---
+title: "Distributions homework"
+output: html_notebook
+---
+## MVP
+
+### Question 1
+
+__Load the data, `clean_names()` and explore it.__
+
+First load the required libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(janitor)
+```
+Read in the data and have a quick look.
+```{r}
+phone_data <- read_csv("data/20190928-items.csv") %>% 
+  clean_names()
+
+glimpse(phone_data)
+```
+
+The data has 9 columns and 792 rows. All columns appear to be classed correctly. Prices has some missing data.
+
+Check missing data across all columns.
+
+```{r}
+phone_data %>% 
+  summarise(across(everything(), ~sum(is.na(.x))))
+```
+
+The only column missing data is the `prices` column. This is missing 215 variables.
+This column is also currently coded as a character column due to the $.
+Reviewing the questions it appears this column is not required at this stage. Leave this column as it is for now. <br>
+
+### Question 2
+
+__Find the brand with the highest numbers of phones in the dataset.__
+
+```{r}
+phone_data %>% 
+  group_by(brand) %>% 
+  summarise(total = n()) %>% 
+  slice_max(total, with_ties = TRUE)
+```
+
+Samsung has the most number of phones in the data set with 397 phones in total. This is just over half the phones in the `phone_data` data set. <br>
+
+### Question 3
+
+__For your top brand, plot the distribution of phone ratings as a probability density, overlaying a fitted normal distribution. Do you think the normal distribution provides a good model of these ratings?<br><br>[**Hint** - you will need to calculate the `mean()` and `sd()` of the ratings to plot the appropriate normal. Alternatively, investigate using the `fitdistr()` function in the `MASS` package]__
+
+```{r}
+#filter data for top brand
+samsung_phones <- phone_data %>% 
+  filter(brand == "Samsung")
+
+#generate summary stats
+samsung_phone_stats <- samsung_phones %>% 
+  summarise(
+    num = n(),
+    mean = mean(rating),
+    sd = sd(rating)
+  )
+
+#plot distribution
+samsung_phones %>% 
+  ggplot(aes(x = rating)) +
+  geom_histogram(aes(y = ..density..), col = "white") +
+  stat_function( #use this to plot the norm distrib over the histogram
+    fun = dnorm,
+    args = list(
+      mean = samsung_phone_stats$mean,
+      sd = samsung_phone_stats$sd
+    ),
+    col = "blue"
+  )
+```
+
+The probability density of ratings for the top brand (Samsung) shows a slight left skew. The fitted normal distribution does not show a good fit to the data. There are some outliers seen in the plot as peaks which are found outside of the fitted normal distribution. <br>
+
+## Question 4
+
+We can be more quantitative in comparing the distribution of top brand ratings with a normal distribution. You calculated the `mean()` and `sd()` of your distribution in an earlier question. Use these values to calculate the *proportions* of ratings within one-, two- and three standard deviations of the mean. Compare these proportions with those you expect for a normal distribution. 
+
+```{r}
+#function to calculate proportion of data within x sd from the mean
+prop_within_n_sd_calculator <- function(data, n){
+  data %>% 
+    filter(rating >= samsung_phone_stats$mean - n*samsung_phone_stats$sd,
+         rating <= samsung_phone_stats$mean + n*samsung_phone_stats$sd) %>%
+  summarise(prop_within_sd = n()/samsung_phone_stats$num) %>% 
+    pull()
+}
+
+#generate table with expected proportions for a normal distribution
+prop_table <- tibble(
+within_1_sd = (pnorm(q = 1) - pnorm(q = -1)),
+within_2_sd = (pnorm(q = 2) - pnorm(q = -2)),
+within_3_sd = (pnorm(q = 3) - pnorm(q = -3))
+)
+
+#calc proportions from mean
+
+prop_table_data <- tibble(
+within_1_sd = prop_within_n_sd_calculator(samsung_phones, 1),
+within_2_sd = prop_within_n_sd_calculator(samsung_phones, 2),
+within_3_sd = prop_within_n_sd_calculator(samsung_phones, 3)
+)
+
+prop_table
+prop_table_data
+```
+
+This data has a proportion of 0.79 of the data within 1 standard deviations away from the mean, a proportion of 0.92 of the data within 2 standard deviations from the mean and 0.98 of the data within 3 standard deviations of the mean. For an ideally normally distributed dataset with a mean of 0, a proportion of 0.68 of the data should be distributed within 1 standard deviation of the mean, a proportion of 0.95 of the data should be distributed within 2 standard deviations of the mean and a proportion of 0.99 of the data should be distributed within 3 standard deviations of the mean.
+
+Taking all this information together, I would say this suggests that the distribution of the data is not normally distributed.
