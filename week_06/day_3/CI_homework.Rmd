@@ -1,0 +1,155 @@
+---
+title: "Homework - CIs"
+output: html_notebook
+---
+# MVP
+
+### Task 1
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(janitor)
+```
+
+```{r}
+ames <- read_csv("data/ames.csv") %>% 
+  clean_names()
+
+head(ames)
+```
+
+### Task 2
+
+```{r}
+ames %>% 
+  ggplot() +
+  aes(x = lot_area) +
+  geom_histogram(col = "white", bins = 30)
+```
+
+Looking at the histogram for `lot_area` the data is not roughly normally distributed. There appears to be a right skew in the data. It is tricky to see on the dataset but let's load the top 10 lot_areas to have a look.
+
+```{r}
+ames %>% 
+  select(lot_area) %>% 
+  slice_max(lot_area, n = 10)
+```
+As confirmed from the histogram, there are 4 values which are much larger than the rest of the data set.
+
+### Task 3
+
+```{r}
+#load library
+library(infer)
+
+#generate bootstrap sampling distribution
+infer_lot_area <- ames %>% 
+    specify(response = lot_area) %>% 
+    generate(reps = 5000, type = "bootstrap") %>% 
+    calculate(stat = "mean")
+
+#visualise
+infer_lot_area %>% 
+visualise() +
+  labs(x = "mean(lot_area)")
+```
+The bootstrap sampling distribution for the `mean(lot_area)` follows a normal distribution.
+
+### Task 4
+
+```{r}
+#get the 95% CI
+ci_95 <- infer_lot_area %>% 
+  get_ci(level = 0.95, type = "percentile")
+
+#add this to the plot
+infer_lot_area %>% 
+visualise() +
+  labs(x = "mean(lot_area)") +
+  shade_ci(endpoints = ci_95)
+```
+The bootstrap distribution of `mean(lot_area)` shows a normal distribution. The 95% confidence interval for the `mean(lot_area)` is shown as the green shaded area.
+
+### Task 5
+
+```{r}
+#get the 99% CI
+ci_99 <- infer_lot_area %>% 
+  get_ci(level = 0.99, type = "percentile")
+
+#add this to the plot
+infer_lot_area %>% 
+visualise() +
+  labs(x = "mean(lot_area)") +
+  shade_ci(endpoints = ci_99)
+```
+The 99% CI is shown in green above. This is broader than the 95% CI. This makes sense as it is now representing a larger interval from your data (99% as opposed to 95%) and so should be broader and encompass more data.
+
+## Task 6
+
+```{r}
+#take the mean from the bootstrapped data
+infer_mean_lot_area <- infer_lot_area %>% 
+  summarise(mean = mean(stat))
+infer_mean_lot_area
+
+#just for sanity check the mean from the data
+sample_mean_lot_area <- ames %>% 
+  summarise(mean = mean(lot_area))
+sample_mean_lot_area
+```
+
+The point estimate of the mean(lot_area) is 10149.31.
+
+# Extension
+
+### Task 1
+Calculate a point estimate and 95% CI for the proportion of houses in the data built before 1920. Does the number of reps you use matter? [Investigate reps from 200 up to 50000, memory of your laptop permitting].
+
+```{r}
+#### WARNING - this code may run for a while! 
+
+#create column for filtering proportion
+before_1920_ames <- ames %>% 
+  mutate(
+    before_1920 = if_else(year_built <1920, TRUE, FALSE)
+  ) %>% 
+  select(year_built, before_1920)
+
+ci_reps <- c(200, 500, 1000, 2500, 5000, 10000, 15000, 20000, 25000, 50000)
+result_table <- tibble()
+
+for (i in ci_reps){
+
+#log value of i in console
+cat(i, sep="\n")
+
+#generate bootstrap sampling distribution with i reps from ci_reps
+infer_before_1920 <- before_1920_ames %>% 
+    specify(response = before_1920, success = as.character(TRUE)) %>% 
+    generate(reps = i, type = "bootstrap") %>% 
+    calculate(stat = "prop")
+
+#create CI
+ci_95_before_1920 <- infer_before_1920 %>% 
+  get_ci(level = 0.95, type = "percentile")
+
+#prepare result for binding to the table
+result_row <- c(
+  sample_num = i,
+  lower = ci_95_before_1920 %>% 
+    pull(lower_ci),
+  upper = ci_95_before_1920 %>% 
+    pull(upper_ci)
+)
+
+#add the result line to the table
+result_table <- result_table %>% 
+  bind_rows(result_row)
+
+}
+
+result_table
+```
+
+The more reps you use the smaller the confidence interval and the closer you get to approximating the population mean. I would say the improvement in values is so small that using a bootstrap of 5000 would be suitable for most applications.
