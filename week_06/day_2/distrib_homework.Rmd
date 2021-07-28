@@ -58,6 +58,7 @@ __For your top brand, plot the distribution of phone ratings as a probability de
 #filter data for top brand
 samsung_phones <- phone_data %>% 
   filter(brand == "Samsung")
+#here can also remove rating column
 
 #generate summary stats
 samsung_phone_stats <- samsung_phones %>% 
@@ -66,6 +67,12 @@ samsung_phone_stats <- samsung_phones %>%
     mean = mean(rating),
     sd = sd(rating)
   )
+
+
+#alternative solution
+# or can use the fitdistr() function from the MASS package
+# samsung_stats_fitdistr <- MASS::fitdistr(x = samsung_ratings$rating, densfun = "normal")
+# samsung_stats_fitdistr
 
 #plot distribution
 samsung_phones %>% 
