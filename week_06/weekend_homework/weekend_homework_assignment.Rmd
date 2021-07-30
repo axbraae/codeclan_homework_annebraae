@@ -193,19 +193,24 @@ For the following three business problems write out:
 
 <br>
 
-**Question 1.**  
-You work for a independent coffee shop. The boss tells you that she thinks that around $40\%$ of people in the town (population $30,000$) know of the coffee shop, but you are skeptical of the estimate. You conduct a random survey of $200$ people in the town, asking if respondents are aware of your coffee shop. You want to use the sample to test the hypothesis that $40\%$ or more of the town's population have heard of the coffee shop. 
+**Question 1.**
+
+This is a one sample proportion hypothesis test.
+
+- I would set an alpha of $0.05$
+- My hypotheses are:
+    -$H_0$ π(people who know of the coffee shop) = 40%
+  The null hypothesis is that 40% of the town population know of the coffee shop.
+  
+    -$H_a$ π(people who know of the coffee shop) \> 40%
+  The alternative hypothesis is that more than 40% of the town population know about the coffee shop.
+- the null distribution would be generated with a simulation.
 
 <br>
 
 **Question 2.**  
 You work for a website design company and have performed an **A/B test** on the position of a banner on a website promoting a particular item. 
-<br><br>
-<div class='emphasis'>
-**A/B testing** 
-A method comparing two versions of a web page, email, flyer or other marketing device against each other to determine which version performs better. As it is essentially a controlled experiment, the design should try to ensure that the groups experiencing both versions of the marketing device are equivalent and representative of the population.
-</div>
-<br><br>
+<br>
 You selected five days at random last month and then randomly selected $200$ of each sampled day's users into group $A$ and another $200$ of that day's users into group $B$. Group $A$ continued to be shown the banner at the right hand side of the webpage (its usual position) while group $B$ was shown the banner at the top of the page. You monitored each sampled user's interactions with the website, in particular the 'click through rate' (CTR) on the banner, i.e. what proportion of sampled users clicked on the banner. You want to use the sampled data to test the hypothesis that website users overall are more likely to click on the banner if positioned at the top of the page   
 <br>
 
