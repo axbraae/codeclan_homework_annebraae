@@ -198,12 +198,14 @@ For the following three business problems write out:
 This is a one sample proportion hypothesis test.
 
 - I would set an alpha of $0.05$
+
 - My hypotheses are:
     -$H_0$ π(people who know of the coffee shop) = 40%
   The null hypothesis is that 40% of the town population know of the coffee shop.
   
     -$H_a$ π(people who know of the coffee shop) \> 40%
   The alternative hypothesis is that more than 40% of the town population know about the coffee shop.
+  
 - the null distribution would be generated with a simulation.
 
 <br>
