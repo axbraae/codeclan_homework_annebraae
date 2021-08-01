@@ -82,7 +82,7 @@ p_value <- null_distribution %>%
 
 p_value
 ```
-The p-value is less than 0.05 (alpha) therefore we can reject the null hypothesis (H0) in favor of the alternative hypothesis (HA). There is enough evidence in the sample to suggest that the mean `total_sleep` of all animal types in the data is statistically significantly different from the mean total sleep of jabberwockies of 7 hours.
+The p-value is less than 0.05 (alpha) therefore we can reject the null hypothesis ($H0$) in favor of the alternative hypothesis ($Ha$). There is enough evidence in the sample to suggest that the mean `total_sleep` of all animal types in the data is statistically significantly different from the mean total sleep of jabberwockies of 7 hours.
 
 <br>
 
@@ -91,12 +91,12 @@ Perform an appropriate statistical test to determine whether omnivores sleep for
 
 This is an independent two sample mean test.
 
-I will test this at an alpha of 0.05.
+I will test this at an $\alpha$ of $0.05$.
 
 The hypotheses are:
 
-- H0: µ(omnivores) - µ(herbivores) = 0
-- HA: µ(omnivores) - µ(herbivores) > 0
+- $H0$: µ(omnivores) - µ(herbivores) = 0
+- $Ha$: µ(omnivores) - µ(herbivores) > 0
 
 Calculate the sample mean (observed statistic) for omnivores and herbivores:
 ```{r}
@@ -127,7 +127,7 @@ p_value <- null_distribution %>%
 p_value
 ```
 
-The p-value of 0.1272 is greater than 0.05 which means we lack sufficient evidence to reject H0 therefore we fail to reject H0. Based on our sample we do not have enough evidence to suggest that the mean total sleep time of omnivores is statistically significantly larger than the mean total sleep time of herbivores. Therefore we have no evidence that omnivores sleep longer than herbivores.
+The p-value of 0.1272 is greater than the critival value 0.05 which means we lack sufficient evidence to reject the null hypothesis therefore we fail to reject $H0$. Based on our sample we do not have enough evidence to suggest that the mean total sleep time of omnivores is statistically significantly larger than the mean total sleep time of herbivores. Therefore we have no evidence that omnivores sleep longer than herbivores.
 
 <br>
 
@@ -185,12 +185,6 @@ The p-value of 6e-04 is less than the alpha of 0.05. There is enough evidence in
 
 ## Hypothesis testing - Defining the Hypothesis 
 
-For the following three business problems write out:
-
-* What kind of test you would use  
-*  $H_0$ and $H_a$ in **both** mathematical notation and in words. 
-* Also state the method you would use to generate the null distribution (bootstrap, permutation or simulation). 
-
 <br>
 
 **Question 1.**
@@ -211,13 +205,35 @@ This is a one sample proportion hypothesis test.
 <br>
 
 **Question 2.**  
-You work for a website design company and have performed an **A/B test** on the position of a banner on a website promoting a particular item. 
-<br>
-You selected five days at random last month and then randomly selected $200$ of each sampled day's users into group $A$ and another $200$ of that day's users into group $B$. Group $A$ continued to be shown the banner at the right hand side of the webpage (its usual position) while group $B$ was shown the banner at the top of the page. You monitored each sampled user's interactions with the website, in particular the 'click through rate' (CTR) on the banner, i.e. what proportion of sampled users clicked on the banner. You want to use the sampled data to test the hypothesis that website users overall are more likely to click on the banner if positioned at the top of the page   
-<br>
+
+This is a two sample proportion hypothesis test.
+
+- I would set an alpha of $0.05$
+
+- My hypotheses are:
+    -$H_0$ π(CTR group $B$) - π(CTR group $A$) = 0
+  The null hypothesis is that both groups click on the banner the same proportion so the differences in proportions between the groups is zero.
+  
+    -$H_a$ π(CTR group $B$) - π(CTR group $A$) \> 0
+  The alternative hypothesis is that a higher proportion of group $B$ clicked on the banner than group $A$ so the difference in proportions between group $B$ and group $A$ would be greater than zero.
+  
+- the null distribution would be generated with a permutation.
 
 **Question 3.**  
-You work as an analyst for a car manufacturing company - they have specific standards they must meet for standards and regulation purposes. You have been asked to check the quality control of the manufacture of a particular car part. You have been given data on a sample of $200$ parts produced over the period of a week (the sampled parts were pulled at random from the production line and measured: the factory produced a lot more than $200$ parts that week). The specification of the part stipulates a width of $145\textrm{mm}$, and the manufacturing process is said to have 'drifted' if the mean width of parts differs significantly from $145\textrm{mm}$. You want to use the sampled measurements to test whether the process overall has drifted.     
+
+This is a one sample mean hypothesis test.
+
+- I would set an alpha of $0.01$. For this case, I would be more stringent as I would not want to make a false positive error (reject the null hypothesis when it is actually true) so I would lower the alpha.
+
+- My hypotheses are:
+    -$H_0$ µ(part) = $145\textrm{mm}$
+  The null hypothesis is that the population mean for the part is equal to $145\textrm{mm}$.
+  
+    -$H_a$ µ(part) != $145\textrm{mm}$
+  The alternative hypothesis is that the population mean for the part is different to $145\textrm{mm}$.
+  
+- the null distribution would be generated with a bootstrap.
+
 
 
 ## Hypothesis Testing - Interpreting the results
@@ -230,19 +246,20 @@ For the 3 business problems stated above, imagine we performed you got the follo
 
 **Coffee shop problem**. Significance level: 0.05, calculated $p$-value: 0.07
 
+The p-value of 0.07 is higher than the critical value of 0.05 we fail to reject the null hypothesis. Therefore there is not enough evidence to say that more than 40% of the town population know of the coffee shop.
+
 <br>
 
 **Question 2.**  
 
 **Website company problem**. Significance level: 0.01, $p$-value: 0.006
-
+The calculated p-value of 0.006 is less than the critical value of 0.01, therefore we reject the null hypothesis. There is enough evidence to say that the CTR of the banner placed at the top of the website is higher than the CTR for the banner placed in it's usual position.
 <br>
 
 **Question 3.**  
 
 **Manufacturing company problem**. Significance level: 0.05, $p$-value: 0.55
-
-
+The p-value of 0.55 is higher than the critical value of 0.05 therefore we cannot reject the null hypothesis. There is not enough evidence to say that mean for the part differs significantly from $145\textrm{mm}$.
 
 # Extension
 
