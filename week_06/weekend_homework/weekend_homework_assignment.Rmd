@@ -16,6 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(infer)
+library(janitor)
 
 data(msleep)
 ```
@@ -265,68 +266,16 @@ The p-value of 0.55 is higher than the critical value of 0.05 therefore we canno
 
 ## Market Basket Analysis
 
-**Association rule mining** is regularly used by retailers to find associations between products that people purchase, perhaps for an online retailer, the items that people put together in their 'baskets', and in a bricks and mortar retailer, the items purchased together in a single transaction. The aim is to find recurring patterns in the transactions which the retailer can then use to do targeted marketing of items, seeking to increase 'cross sales'. Rules mining of this sort can also be used in other industries beyond retail to identify patterns in data. 
-
-**Market basket analysis (MBA)** uses association rule mining. It looks at the association of items occurring in a **single basket**, and so won't look at your purchases over time, but only items that are purchased together in a single purchase (i.e. a 'basket'). As a good example, you may have seen the 'Frequently Bought Together' section on Amazon (and other sites), which looks at items you've got in your basket and suggests items that other people commonly have in their baskets when they also have these items:
-
-```{r, echo=FALSE,, out.width = '60%', fig.align="center" }
-knitr::include_graphics("images/freq_bought_together.jpeg")
-```
-
-MBA differs from recommendation algorithms because the association rules look only at items bought together in a single purchase, they don't use any characteristics of the purchaser to profile them (e.g. 'Based on purchases by people like you, you may also like...') or how their purchases vary over time. The association rules used for MBA use the probability principles we learned on Monday this week. 
-
-## Association rules 
-
-The rules obtained by MBA have three concepts associated with them, as follows:
-
-**Support**  
-The probability of items in the rule being purchased together:
-
-e.g. $\textrm{sup}(A \rightarrow B) = P(\textrm{A and B being purchased together}) = \frac{\textrm{number of transactions involving A and B}}{\textrm{total number of transactions}}$
-
-Support also has meaning for single items:
-
-e.g. $\textrm{sup}(A) = P(A) = \frac{\textrm{number of transactions involving A}}{\textrm{total number of transactions}}$
-
-**Confidence**  
-The proportion of purchases of $A$ where $B$ has also been purchased:
-
-e.g. $\textrm{conf}(A \rightarrow B) = \frac{\textrm{P(A and B being purchased together)}}{\textrm{P(A being purchased)}}$
-
-**Lift**  
-Increase in sales of $A$ when sold with $B$
-
-$\textrm{lift}(A \rightarrow B) = \frac{\textrm{sup}(A \rightarrow B)}{\textrm{sup}(A) \times \textrm{sup}(B)}$
-
-If $\textrm{sup}(A \rightarrow B) = \textrm{sup}(A) \times \textrm{sup}(B)$ then this means $P(A \textrm{ and } B) = P(A) \times P(B)$. We know from the probability lesson earlier in the week that this means the purchase of $A$ and $B$ are independent events. This may help with our interpretation of lift values:
-
-* $\textrm{lift}(A \rightarrow B) \gt 1$ - items $A$ and $B$ are more likely to be bought together 
-* $\textrm{lift}(A \rightarrow B) = 1$ - no correlation between items $A$ and $B$ being bought together
-* $\textrm{lift}(A \rightarrow B) < 1$ - items $A$ and $B$ are unlikely to be bought together
-
-A and B don't need to be single items, they could be sets of items (itemsets) e.g. A = {TV, DVD player}, B = {TV stand}. 
-
-## Using the rules 
-
-Once we have calculated the rules we can use them to gain insights about items/itemsets. 
-
-For example, if for items $A$ and $B$ the corresponding rule $(A \rightarrow B)$ has a low support but a lift greater than $1$ then we can say that when $A$ is purchased $B$ is often purchased with it (high lift), but such transactions don't happen all that frequently (low support). 
-
-The **apriori algorithm** is often used as a way of selecting 'interesting' rules. It will calculate all the support, confidence and lift values for the item/itemset combinations of your dataset and will return those with support values greater than a pre-defined threshold value set by the user. 
-
 ## Homework exercise
 
 Let's load in some transaction data which has details on the items purchased in each transaction (where each transaction is uniquely identified by the `InvoiceNo` variable). 
 
 ```{r}
 library(tidyverse)
+library(janitor)
 transactions <- read_csv("data/online_retail_subset.csv")
 head(transactions, 20)
 ```
-
-## Association rules 
-
-For the first section we are interested in the purchase of two particular items:
 
 * item $A$ - 'HEART OF WICKER SMALL' (`StockCode` $22469$) 
 * item $B$ - 'LARGE CAKE TOWEL PINK SPOTS' (`StockCode` $21110$)
@@ -334,24 +283,47 @@ For the first section we are interested in the purchase of two particular items:
 **Question 1.**  
 Calculate the support for item $A$ (this will be the support for a single item)
 
+```{r}
+transactions <- transactions %>% 
+  clean_names()
+
+sup_a <- transactions %>% 
+  summarise(p_a = sum(stock_code == 22469) / n())
+sup_a
+```
+Support for item $A$ - 'HEART OF WICKER SMALL' is 0.366%.
+
 **Question 2.**  
 Calculate the support and confidence for rule $(A \rightarrow B)$. 
+
+```{r}
+sup_a_and_b <- transactions %>% 
+  filter(stock_code == 22469 | stock_code == 21110) %>% 
+  add_count(invoice_no) %>% 
+  filter(n > 1) %>% 
+  summarise(p_a_and_b = n() / nrow(transactions))
+sup_a_and_b
+
+conf_a_and_b <- sup_a_and_b / sup_a
+conf_a_and_b
+```
+The support for $(A \rightarrow B)$ is 0.0466 %.
+The confidence for $(A \rightarrow B)$ is 12.73%.
 
 **Question 3.**  
 Calculate the lift for $(A \rightarrow B)$
 
-<details>
-<summary>**Hint**</summary>
-You will need to calculate the support for $B$]
-</details>
+```{r}
+#first calculate support for b
+sup_b <- transactions %>% 
+  summarise(p_b = sum(stock_code == 21110) / n())
+
+lift_a_b <- sup_a_and_b / (sup_a*sup_b)
+lift_a_b
+```
+Lift $(A \rightarrow B)$ is 272.72. This is substantially larger than 1. Therefore items A and B are more likely to be bought together.
 
 ## Apriori algorithm 
-
-Read up on the `arules` and `arulesViz` packages, which make use of the 'apriori' algorithm http://www.salemmarafi.com/code/market-basket-analysis-with-r/comment-page-1/
-
-Use these packages to play around, applying the apriori algorithm to the `transactions` dataset we have. 
-
-To use the `arules` package we need the data to be a special type of 'transactions' object. We do this by reading in the data using `read.transactions()` function from the `arules` package. We have done this for you below (for more information on this type of transactions object see the helpfile `?transactions`):
 
 ```{r, message = FALSE, warning = FALSE}
 library(arules)
@@ -360,12 +332,12 @@ library(arulesViz)
 
 ```{r}
 transactions_reformat <- transactions %>%
-  select(InvoiceNo, Description) %>%
+  select(invoice_no, description) %>%
   na.omit()
 
 write_csv(transactions_reformat, "transactions_reformat.csv")
 
-apriori_format <- read.transactions("transactions_reformat.csv", format = "single", sep = ",", header = TRUE, cols = c("InvoiceNo", "Description"))
+apriori_format <- read.transactions("transactions_reformat.csv", format = "single", sep = ",", header = TRUE, cols = c("invoice_no", "description"))
 
 inspect(head(apriori_format))
 ```
@@ -373,4 +345,55 @@ inspect(head(apriori_format))
 Now you're all set to play around with `arules` and `arulesViz`. 
 
 **Warning about run time/memory usage:** if the minimum support is set too low for the dataset, then the algorithm will try to create an extremely large set of itemsets/rules. This will result in very long run times and the process may eventually run out of memory. You can either start by trying a reasonably high support (for this dataset, we would suggest starting at $1%$ and then systematically lower the support if don't see any results). There is also an argument `maxtime` which can be used to prevent long run times (more information on that in the `apriori` user document [here](https://rdrr.io/cran/arules/man/apriori.html)). 
+
+```{r}
+#write rules for support, confidence and lift
+rules <- apriori(apriori_format, parameter = list(supp = 0.01, conf = 0.8))
+
+#look at the top 5 rules with only 2 digits
+options(digits = 2)
+inspect(rules[1:5])
+
+summary(rules)
+```
+
+
+Let's follow the blog entry and sort the rules by confidence
+
+```{r}
+rules <- sort(rules, by = "confidence", decreasing = TRUE)
+
+options(digits = 2)
+inspect(rules[1:5])
+```
+Interesting the confidence for all these herbs is 1! The lift is also pretty high at 71 to 79.
+
+Let's have a look at the original problem to see what the correct confidence and lift are for those two items.
+
+Hmm actually they won't come out because the support was very low.  Oh well let's check out something else.
+```{r}
+rules <- apriori(data = apriori_format, parameter = list(supp = 0.01, conf = 0.08),
+                 appearance = list(default = "lhs", rhs = "60 TEATIME FAIRY CAKE CASES"),
+                 control = list(verbose = F))
+
+rules <- sort(rules, decreasing = TRUE, by = "confidence")
+inspect(rules[1:5])
+```
+
+Interesting. So buying other cake cases is an indication on what customers are likely to buy before buying the fairy cake cases.
+
+"LARGE CAKE TOWEL PINK SPOTS"
+```{r}
+rules <- apriori(data = apriori_format, parameter = list(supp = 0.001, conf = 0.10),
+                 appearance = list(default = "rhs", lhs = "HEART OF WICKER SMALL"),
+                 control = list(verbose = F))
+
+rules <- sort(rules, decreasing = TRUE, by = "lift")
+inspect(rules[1:5])
+```
+
+```{r}
+library(arulesViz)
+plot(rules,method="graph",interactive=TRUE,shading=NA)
+```
 
