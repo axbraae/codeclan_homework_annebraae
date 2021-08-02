@@ -1,0 +1,406 @@
+---
+title: "Untitled"
+author: "Anne Braae"
+date: "30/07/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# MVP
+
+## Hypothesis testing - practical
+
+```{r, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(infer)
+library(janitor)
+
+data(msleep)
+```
+
+<br>
+
+**Question 1.**  
+Explore the dataset and familiarise yourself with it.
+
+```{r}
+glimpse(msleep)
+head(msleep)
+
+dim(msleep)
+```
+There are 83 rows of 11 variables. Variables appear to have been classed correctly.
+The names look clean, there are some missing values. Let's have a look at these now.
+
+```{r}
+msleep %>% 
+  summarise(across(everything(), ~ sum(is.na(.x))))
+```
+There are 7 missing values in vore, 29 in conservation, 22 in sleep_rem, 51 in sleep_cycle and 27 in brainwt. Leave these in the dataset for now.
+
+<br>
+
+**Question 2.**  
+Jabberwockies sleep for around 7 hours a night, on average. Perform an appropriate statistical test to determine whether the mean `sleep_total` in the sampled population of animal types differs from the typical value for jabberwockies.
+
+This is a one sample mean test
+- H0: µ(sleep_total) = 7
+- HA: µ(sleep_total) != 7
+alpha: 0.05
+
+The null hypothesis is that the mean of animal types sleep total is no different to that of the mean jabberwockies sleep time, that is 7 hours. The alternative hypothesis is that the mean sleep total of the animal types is different to that of jabberwockies.
+
+First we need to calculate the sample mean:
+
+```{r}
+mean_sleep <- msleep %>% 
+  summarise(mean_sleep = mean(sleep_total))
+```
+
+Next I will calculate the null distribution which calculates the mean for the bootstrap sample and repeats this many times to generate the null distribution. The center of this distribution is then shifted to the given value to be tested which in this case is 7.
+
+We treat the situation specified by the null hypothesis as being true and use this mean to generate a sampling distribution using bootstrapping.
+
+```{r}
+#generate null distribution based on mean value specified in null hypothesis
+null_distribution <- msleep %>% 
+  specify(response = sleep_total) %>% 
+  hypothesise(null = "point", mu = 7) %>% 
+  generate(reps = 10000, type = "bootstrap") %>% 
+  calculate(stat = "mean")
+
+#visualise
+null_distribution %>% 
+  visualise(bins = 30) + 
+  shade_p_value(obs_stat = mean_sleep, direction = "both")
+```
+```{r}
+p_value <- null_distribution %>% 
+  get_p_value(obs_stat = mean_sleep$mean_sleep, direction = "both")
+
+p_value
+```
+The p-value is less than 0.05 (alpha) therefore we can reject the null hypothesis ($H0$) in favor of the alternative hypothesis ($Ha$). There is enough evidence in the sample to suggest that the mean `total_sleep` of all animal types in the data is statistically significantly different from the mean total sleep of jabberwockies of 7 hours.
+
+<br>
+
+**Question 3.**  
+Perform an appropriate statistical test to determine whether omnivores sleep for significantly longer than herbivores, on average.
+
+This is an independent two sample mean test.
+
+I will test this at an $\alpha$ of $0.05$.
+
+The hypotheses are:
+
+- $H0$: µ(omnivores) - µ(herbivores) = 0
+- $Ha$: µ(omnivores) - µ(herbivores) > 0
+
+Calculate the sample mean (observed statistic) for omnivores and herbivores:
+```{r}
+observed_stat <- msleep %>% 
+  filter(!is.na(vore),
+         !vore %in% c("carni", "insecti")) %>% 
+  specify(sleep_total ~ vore) %>% 
+  calculate(stat = "diff in means", order = c("omni", "herbi"))
+```
+
+Calculate the null distribution
+```{r}
+null_distribution <- msleep %>% 
+  filter(!is.na(vore),
+         !vore %in% c("carni", "insecti")) %>% 
+  specify(sleep_total ~ vore) %>%  
+  hypothesize(null = "independence") %>% 
+  generate(reps = 10000, type = "permute") %>% 
+  calculate(stat = "diff in means", order = c("omni", "herbi"))
+
+null_distribution %>% 
+  visualise() +
+  shade_p_value(obs_stat = observed_stat, direction = "right")
+
+p_value <- null_distribution %>% 
+  get_p_value(obs_stat = observed_stat, direction = "right")
+
+p_value
+```
+
+The p-value of 0.1272 is greater than the critival value 0.05 which means we lack sufficient evidence to reject the null hypothesis therefore we fail to reject $H0$. Based on our sample we do not have enough evidence to suggest that the mean total sleep time of omnivores is statistically significantly larger than the mean total sleep time of herbivores. Therefore we have no evidence that omnivores sleep longer than herbivores.
+
+<br>
+
+**Question 4. **
+Perform an appropriate statistical test to determine whether the proportion of domesticated animal types in the population of animal types is greater than $5\%$.
+
+This is a one sample proportion hypothesis test.
+
+alpha 0.05
+
+- H0: π(domesticated animal types) = 5%
+- HA: π(domesticated animal types) > 5%
+
+Let's wrangle the data to get an `is_domesticated` column and then calculate the observed proportion statistic in the sample data.
+```{r}
+domesticated <- msleep %>% 
+  filter(!is.na(conservation)) %>% 
+  mutate(is_domesticated = if_else(conservation == "domesticated", TRUE, FALSE)) %>% 
+  select(name, is_domesticated)
+
+#generate observed_statistic
+observed_stat <- domesticated %>% 
+  specify(response = is_domesticated, success = as.character(TRUE)) %>% 
+  calculate(stat = "prop") %>% 
+  pull()
+
+observed_stat
+```
+
+The proportion of domesticated animals observed in the sample is 18.5%. Let's see if this is significantly greater than 5%.
+
+```{r}
+#generate null distribution
+null_distribution <- domesticated %>% 
+  specify(response = is_domesticated, success = as.character(TRUE)) %>% 
+  hypothesise(null = "point", p = 0.05) %>% 
+  generate(reps = 10000, type = "simulate") %>% 
+  calculate(stat = "prop")
+
+#visualise the distribution
+null_distribution %>% 
+  visualise() +
+  shade_p_value(obs_stat = observed_stat, direction = "right")
+
+p_value <- null_distribution %>% 
+  get_p_value(obs_stat = observed_stat, direction = "right")
+
+p_value
+```
+
+The p-value of 6e-04 is less than the alpha of 0.05. There is enough evidence in the sample data to reject the null hypothesis. That is that the proportion of domesticated animal types in the population of animal types is statistically significantly greater than 5%.
+
+NOTE: NEVER ACCEPT HA only say there is enough evidence to support the alternative hypothesis. OR say accept that and then copy the HA text. CANNOT ACCEPT HA CAN ONLY REJECT OR FAIL TO REJECT HO. CAN ACCEPT alternative hypothesis in this sampled data. We don't know that the hypothesis will always be like this.
+
+<br>
+<hr>
+
+## Hypothesis testing - Defining the Hypothesis 
+
+<br>
+
+**Question 1.**
+
+This is a one sample proportion hypothesis test.
+
+- I would set an alpha of $0.05$
+
+- My hypotheses are:
+    -$H_0$ π(people who know of the coffee shop) = 40%
+  The null hypothesis is that 40% of the town population know of the coffee shop.
+  
+    -$H_a$ π(people who know of the coffee shop) \> 40%
+  The alternative hypothesis is that more than 40% of the town population know about the coffee shop.
+  
+- the null distribution would be generated with a simulation.
+
+<br>
+
+**Question 2.**  
+
+This is a two sample proportion hypothesis test.
+
+- I would set an alpha of $0.05$
+
+- My hypotheses are:
+    -$H_0$ π(CTR group $B$) - π(CTR group $A$) = 0
+  The null hypothesis is that both groups click on the banner the same proportion so the differences in proportions between the groups is zero.
+  
+    -$H_a$ π(CTR group $B$) - π(CTR group $A$) \> 0
+  The alternative hypothesis is that a higher proportion of group $B$ clicked on the banner than group $A$ so the difference in proportions between group $B$ and group $A$ would be greater than zero.
+  
+- the null distribution would be generated with a permutation.
+
+**Question 3.**  
+
+This is a one sample mean hypothesis test.
+
+- I would set an alpha of $0.01$. For this case, I would be more stringent as I would not want to make a false positive error (reject the null hypothesis when it is actually true) so I would lower the alpha.
+
+- My hypotheses are:
+    -$H_0$ µ(part) = $145\textrm{mm}$
+  The null hypothesis is that the population mean for the part is equal to $145\textrm{mm}$.
+  
+    -$H_a$ µ(part) != $145\textrm{mm}$
+  The alternative hypothesis is that the population mean for the part is different to $145\textrm{mm}$.
+  
+- the null distribution would be generated with a bootstrap.
+
+
+
+## Hypothesis Testing - Interpreting the results
+
+For the 3 business problems stated above, imagine we performed you got the following p-values (with the given significance levels) write out your interpretation of the results. 
+
+<br>
+
+**Question 1.**  
+
+**Coffee shop problem**. Significance level: 0.05, calculated $p$-value: 0.07
+
+The p-value of 0.07 is higher than the critical value of 0.05 we fail to reject the null hypothesis. Therefore there is not enough evidence to say that more than 40% of the town population know of the coffee shop.
+
+<br>
+
+**Question 2.**  
+
+**Website company problem**. Significance level: 0.01, $p$-value: 0.006
+The calculated p-value of 0.006 is less than the critical value of 0.01, therefore we reject the null hypothesis. There is enough evidence to say that the CTR of the banner placed at the top of the website is higher than the CTR for the banner placed in it's usual position.
+
+Notes: If sample size is huge need to set critical value lower to compensate for multiple testing.
+Notes: p-value: a measure of the probability that an observed difference could have occurred just by random chance.
+In null hypothesis significance testing, the p-value is the probability of obtaining test results at least as extreme as the results actually observed, under the assumption that the null hypothesis is correct.
+
+<br>
+
+**Question 3.**  
+
+**Manufacturing company problem**. Significance level: 0.05, $p$-value: 0.55
+The p-value of 0.55 is higher than the critical value of 0.05 therefore we cannot reject the null hypothesis. There is not enough evidence to say that mean for the part differs significantly from $145\textrm{mm}$.
+
+# Extension
+
+## Market Basket Analysis
+
+## Homework exercise
+
+Let's load in some transaction data which has details on the items purchased in each transaction (where each transaction is uniquely identified by the `InvoiceNo` variable). 
+
+```{r}
+library(tidyverse)
+library(janitor)
+transactions <- read_csv("data/online_retail_subset.csv")
+head(transactions, 20)
+```
+
+* item $A$ - 'HEART OF WICKER SMALL' (`StockCode` $22469$) 
+* item $B$ - 'LARGE CAKE TOWEL PINK SPOTS' (`StockCode` $21110$)
+
+**Question 1.**  
+Calculate the support for item $A$ (this will be the support for a single item)
+
+```{r}
+transactions <- transactions %>% 
+  clean_names()
+
+sup_a <- transactions %>% 
+  summarise(p_a = sum(stock_code == 22469) / n())
+sup_a
+```
+Support for item $A$ - 'HEART OF WICKER SMALL' is 0.366%.
+
+**Question 2.**  
+Calculate the support and confidence for rule $(A \rightarrow B)$. 
+
+```{r}
+sup_a_and_b <- transactions %>% 
+  filter(stock_code == 22469 | stock_code == 21110) %>% 
+  add_count(invoice_no) %>% 
+  filter(n > 1) %>% 
+  summarise(p_a_and_b = n() / nrow(transactions))
+sup_a_and_b
+
+conf_a_and_b <- sup_a_and_b / sup_a
+conf_a_and_b
+```
+The support for $(A \rightarrow B)$ is 0.0466 %.
+The confidence for $(A \rightarrow B)$ is 12.73%.
+
+**Question 3.**  
+Calculate the lift for $(A \rightarrow B)$
+
+```{r}
+#first calculate support for b
+sup_b <- transactions %>% 
+  summarise(p_b = sum(stock_code == 21110) / n())
+
+lift_a_b <- sup_a_and_b / (sup_a*sup_b)
+lift_a_b
+```
+Lift $(A \rightarrow B)$ is 272.72. This is substantially larger than 1. Therefore items A and B are more likely to be bought together.
+
+## Apriori algorithm 
+
+```{r, message = FALSE, warning = FALSE}
+library(arules)
+library(arulesViz)
+```
+
+```{r}
+transactions_reformat <- transactions %>%
+  select(invoice_no, description) %>%
+  na.omit()
+
+write_csv(transactions_reformat, "transactions_reformat.csv")
+
+apriori_format <- read.transactions("transactions_reformat.csv", format = "single", sep = ",", header = TRUE, cols = c("invoice_no", "description"))
+
+inspect(head(apriori_format))
+```
+
+Now you're all set to play around with `arules` and `arulesViz`. 
+
+**Warning about run time/memory usage:** if the minimum support is set too low for the dataset, then the algorithm will try to create an extremely large set of itemsets/rules. This will result in very long run times and the process may eventually run out of memory. You can either start by trying a reasonably high support (for this dataset, we would suggest starting at $1%$ and then systematically lower the support if don't see any results). There is also an argument `maxtime` which can be used to prevent long run times (more information on that in the `apriori` user document [here](https://rdrr.io/cran/arules/man/apriori.html)). 
+
+```{r}
+#write rules for support, confidence and lift
+rules <- apriori(apriori_format, parameter = list(supp = 0.01, conf = 0.8))
+
+#look at the top 5 rules with only 2 digits
+options(digits = 2)
+inspect(rules[1:5])
+
+summary(rules)
+```
+
+
+Let's follow the blog entry and sort the rules by confidence
+
+```{r}
+rules <- sort(rules, by = "confidence", decreasing = TRUE)
+
+options(digits = 2)
+inspect(rules[1:5])
+```
+Interesting the confidence for all these herbs is 1! The lift is also pretty high at 71 to 79.
+
+Let's have a look at the original problem to see what the correct confidence and lift are for those two items.
+
+Hmm actually they won't come out because the support was very low.  Oh well let's check out something else.
+```{r}
+rules <- apriori(data = apriori_format, parameter = list(supp = 0.01, conf = 0.08),
+                 appearance = list(default = "lhs", rhs = "60 TEATIME FAIRY CAKE CASES"),
+                 control = list(verbose = F))
+
+rules <- sort(rules, decreasing = TRUE, by = "confidence")
+inspect(rules[1:5])
+```
+
+Interesting. So buying other cake cases is an indication on what customers are likely to buy before buying the fairy cake cases.
+
+"LARGE CAKE TOWEL PINK SPOTS"
+```{r}
+rules <- apriori(data = apriori_format, parameter = list(supp = 0.001, conf = 0.10),
+                 appearance = list(default = "rhs", lhs = "HEART OF WICKER SMALL"),
+                 control = list(verbose = F))
+
+rules <- sort(rules, decreasing = TRUE, by = "lift")
+inspect(rules[1:5])
+```
+
+```{r}
+library(arulesViz)
+plot(rules,method="graph",interactive=TRUE,shading=NA)
+```
+
