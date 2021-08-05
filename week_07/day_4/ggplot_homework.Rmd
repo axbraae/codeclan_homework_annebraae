@@ -53,3 +53,16 @@ loans %>%
   facet_wrap(~purpose)
 ```
 
+```{r}
+loans %>% 
+  group_by(grade, purpose) %>% 
+  summarise(
+    mean_loan = mean(loan_amnt),
+    mean_int_rate = mean(int_rate)
+  ) %>% 
+  ggplot() +
+  aes(x = mean_loan, y = mean_int_rate) +
+  geom_point() +
+  geom_line()
+```
+
