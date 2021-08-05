@@ -1,0 +1,55 @@
+---
+title: "ggplot Practice Questions - Homework"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+loans <- read_csv("data/loans.csv")
+
+head(loans)
+```
+
+# Question 1
+
+```{r}
+loans %>% 
+  ggplot() +
+  aes(x = loan_amnt, y = int_rate, colour = grade) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~ grade)
+```
+
+These scatter plots show the loan amount on the x axis and the interest rate on the y axis. Each plot shows a separate loan grade. These plots illustrate that interest rate increases as the loan grade increases from A to G.
+
+# Question 2
+
+```{r}
+loans %>% 
+  group_by(grade) %>% 
+  summarise(
+    mean_loan = mean(loan_amnt),
+    mean_int_rate = mean(int_rate)
+  ) %>% 
+  ggplot() +
+  aes(x = grade, y = mean_loan, fill = mean_int_rate) +
+  geom_col()
+```
+
+# Question 3
+summarises how purpose, loan about, interest rate and grade are related. Is there one purpose that is significantly different from the others? How can you show this in your graph?
+
+```{r}
+loans %>% 
+  group_by(grade, purpose) %>% 
+  summarise(
+    mean_loan = mean(loan_amnt),
+    mean_int_rate = mean(int_rate)
+  ) %>% 
+  ggplot() +
+  aes(x = grade, y = mean_loan, fill = mean_int_rate) +
+  geom_col() +
+  facet_wrap(~purpose)
+```
+
