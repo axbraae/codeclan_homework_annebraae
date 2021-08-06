@@ -61,8 +61,16 @@ loans %>%
     mean_int_rate = mean(int_rate)
   ) %>% 
   ggplot() +
-  aes(x = mean_loan, y = mean_int_rate) +
+  aes(x = mean_loan, y = mean_int_rate, colour = purpose) +
   geom_point() +
-  geom_line()
+  geom_line() +
+  scale_colour_manual(values = c("Other" = "#e7298a", "Credit Card" = "#b3e2cd", "Debt Consolidation" = "#fdcdac", "Home Improvement" = "#cbd5e8", "Small Business" = "#e6f5c9")) +
+  theme_minimal() +
+  labs(
+    title = "Mean interest rate and mean loan rate",
+    subtitle = "Other loan types",
+    x = "Mean loan rate",
+    y = "Mean interest rate"
+  )
 ```
 

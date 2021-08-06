@@ -93,7 +93,7 @@ server <- function(input, output) {
             aes(x = score, fill = scored_by) +
             geom_density(alpha = 0.6) +
             theme_minimal() +
-            labs(title = input$genre_input,
+            labs(title = str_c(input$genre_input, " Games"),
                  subtitle = "Scores from critics and users",
                  x = "", fill = "Score")
     })
