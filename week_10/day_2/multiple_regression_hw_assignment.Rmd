@@ -1,0 +1,165 @@
+---
+title: "Features and elements of multiple regression"
+output: html_notebook
+---
+
+
+# MVP
+
+1. Load the `diamonds.csv` data set and undertake an initial exploration of the data. You will find a description of the meanings of the variables on the relevant [Kaggle page](https://www.kaggle.com/shivam2503/diamonds/)
+
+```{r}
+library(tidyverse)
+library(here)
+
+diamonds <- read_csv(here("data/diamonds.csv"))
+
+glimpse(diamonds)
+head(diamonds)
+```
+
+
+<br>
+
+2. We expect the `carat` of the diamonds to be strong correlated with the physical dimensions `x`, `y` and `z`. Use `ggpairs()` to investigate correlations between these four variables.
+
+```{r}
+diamonds %>% 
+  select(carat, x, y, z) %>% 
+ggpairs()
+```
+
+
+<br>
+
+3. So, we do find significant correlations. Let's drop columns `x`, `y` and `z` from the dataset, in preparation to use only `carat` going forward.
+
+```{r}
+diamonds_trim <- diamonds %>% 
+  select(-x, -y, -z)
+```
+
+
+<br>
+
+4. We are interested in developing a regression model for the `price` of a diamond in terms of the possible predictor variables in the dataset. 
+
+  i. Use `ggpairs()` to investigate correlations between `price` and the predictors (this may take a while to run, don't worry, make coffee or something).
+  
+```{r}
+ggpairs(diamonds_trim)
+```
+  
+
+  ii. Perform further `ggplot` visualisations of any significant correlations you find.
+  
+```{r}
+# three numeric correlations - carat, table and depth. 
+diamonds_trim %>% 
+  ggplot() +
+  aes(x = carat, y = price) +
+  geom_point()
+
+diamonds_trim %>% 
+  ggplot() +
+  aes(x = table, y = price) +
+  geom_point()
+
+diamonds_trim %>% 
+  ggplot() +
+  aes(x = depth, y = price) +
+  geom_point()
+```
+
+```{r}
+# three categoric correlations, cut, clarity and color
+diamonds_trim %>% 
+  ggplot() +
+  aes(x = cut, y = price) +
+  geom_boxplot()
+
+diamonds_trim %>% 
+  ggplot() +
+  aes(x = clarity, y = price) +
+  geom_boxplot()
+
+diamonds_trim %>% 
+  ggplot() +
+  aes(x = color, y = price) +
+  geom_boxplot()
+```
+
+
+<br>
+
+5. Shortly we may try a regression fit using one or more of the categorical predictors `cut`, `clarity` and `color`, so let's investigate these predictors: 
+
+  i. Investigate the factor levels of these predictors. How many dummy variables do you expect for each of them?
+  
+```{r}
+unique(diamonds$cut)
+# 4 dummy variables (5 factors)
+unique(diamonds$clarity)
+# 7 dummy variables (8 factors)
+unique(diamonds$color)
+# 6 dummy variables (7 factors)
+```
+
+  
+
+  ii. Use the `dummy_cols()` function in the `fastDummies` package to generate dummies for these predictors and check the number of dummies in each case.
+
+```{r}
+library(fastDummies)
+
+diamonds_dummy <- dummy_cols(diamonds_trim, select_columns = c("cut", "clarity", "color"), remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+```
+
+    
+    
+6. Start with simple linear regression. Regress `price` on `carat` and check the regression diagnostics.
+
+```{r}
+model <- lm(price ~ carat, data = diamonds_dummy)
+```
+
+```{r}
+autoplot(model)
+summary(model)
+```
+Looking at the residuals, the residuals appear to be independent, although the points in the residuals vs fitter plot appear to follow a downwards trend. The residuals do not appear to be normal (they do not all fall on the line of the qq plot), there seems to be some trend visible (slight upwards trend) in the scale-location plot shows some difference in the variation of the data points.
+
+For the model, 84% of the variance in price can be explained by the variance in carat. For every increase in 1 carat, price increases by 7756.43. The model is not very accurate as the model predictions have an error of 1549.
+
+<br>
+
+
+7. Add another predictor of your choice. Check your assumptions, diagnostics, and interpret the model.
+
+```{r}
+model2 <- lm(price ~ carat + clarity_SI2, data = diamonds_dummy)
+```
+
+```{r}
+autoplot(model2)
+```
+
+```{r}
+summary(model2)
+```
+Looking at the residuals, the residuals appear to be independent, although the points in the residuals vs fitter plot appear to follow a downwards trend. The residuals do not appear to be normal (they do not all fall on the line of the qq plot), there seems to be some trend visible (slight upwards trend) in the scale-location plot shows some difference in the variation of the data points.
+
+For the model, the addition of clarity_S12 has improved the model somewhat. Now 86% of the variance in price can be explained by model. For every increase in 1 carat, price increases by 8042.76, assuming all other variables remain constant. While if the diamond is scored with a clarity of clarity_S12 the price decreases by -1349.41 if all other variables remain constant. The accuracy of the model has improved and the standard error is now 1469.
+    
+<hr>
+
+
+# Extension
+    
+8. Try adding an interaction between `log(carat)` and your chosen categorical predictor. Do you think this interaction term is statistically justified?
+
+<br>
+
+9. Find and plot an appropriate visualisation to show the effect of this interaction
+    
