@@ -42,6 +42,12 @@ kc_house_tidy <- kc_house %>%
                                    "3" = "C",
                                    "4" = "D",
                                    "5" = "E"),
+         view = recode_factor(view,
+                              "0" = "Z",
+                              "1"= "A",
+                              "2" = "B",
+                              "3" = "C",
+                              "4" = "D"),
          grade = case_when(
            grade >= 11 ~ "high",
            grade > 7 ~ "above average",
@@ -222,14 +228,162 @@ The addition of waterfront to the model explains more of the variation in price 
 Both models show similar diagnostics of the residuals, which are fulfilling most criteria but which show some heteroscedaticity.
 
 
+To check this is a better model than model_3a I will do an `anova()`.
 
+```{r}
+anova(model_4a, model_3a)
+```
 
-
-Remember, if you are not sure whether including a categorical predictor is statistically justified, run an `anova()` test passing in the models with- and without the categorical predictor and check the p-value of the test.
+There is a statistically significant difference when adding `waterfront` to the model.
 
 # Extensions
 
 * Consider possible interactions between your four main effect predictors and test their effect upon $r^2$. Choose your best candidate interaction and visualise its effect. 
 
+possible interactions:
+sqft_living:lat
+sqft_living:view
+sqft_living:waterfront
+lat:view
+lat:waterfront
+view:waterfront
+
+```{r}
+kc_house_remaining_resid <- kc_house_tidy %>% 
+  add_residuals(model_4a) %>% 
+  select(c("sqft_living", "lat", "view", "waterfront", "resid"))
+
+coplot(resid ~ sqft_living | lat, 
+         panel = function(x, y, ...){
+         points(x,y)
+         abline(lm(y~x), col = "blue")
+       },
+       data = kc_house_remaining_resid)
+```
+
+```{r}
+kc_house_remaining_resid <- kc_house_tidy %>% 
+  add_residuals(model_4a) %>% 
+  select(c("sqft_living", "lat", "view", "waterfront", "resid"))
+
+coplot(resid ~ sqft_living | view, 
+         panel = function(x, y, ...){
+         points(x,y)
+         abline(lm(y~x), col = "blue")
+       },
+       data = kc_house_remaining_resid)
+```
+```{r}
+kc_house_remaining_resid <- kc_house_tidy %>% 
+  add_residuals(model_4a) %>% 
+  select(c("sqft_living", "lat", "view", "waterfront", "resid"))
+
+coplot(resid ~ sqft_living | waterfront, 
+         panel = function(x, y, ...){
+         points(x,y)
+         abline(lm(y~x), col = "blue")
+       },
+       data = kc_house_remaining_resid)
+```
+```{r}
+coplot(resid ~ lat | view, 
+         panel = function(x, y, ...){
+         points(x,y)
+         abline(lm(y~x), col = "blue")
+       },
+       data = kc_house_remaining_resid)
+```
+```{r}
+coplot(resid ~ lat | waterfront, 
+         panel = function(x, y, ...){
+         points(x,y)
+         abline(lm(y~x), col = "blue")
+       },
+       data = kc_house_remaining_resid)
+```
+
+```{r}
+coplot(resid ~ view | waterfront, 
+         panel = function(x, y, ...){
+         points(x,y)
+         abline(lm(y~x), col = "blue")
+       },
+       data = kc_house_remaining_resid)
+```
+
+
+From the interaction coplots looks like waterfront does not have a good interaction variable.
+
+sqft_living:lat
+sqft_living:view
+sqft_living:waterfront
+lat:view
+lat:waterfront
+view:waterfront
+```{r}
+model_5a <- lm(price ~ sqft_living + lat + view + waterfront + sqft_living:lat, data = kc_house_tidy)
+
+summary(model_5a)
+autoplot(model_5a)
+```
+
+
+```{r}
+model_5b <- lm(price ~ sqft_living + lat + view + waterfront + sqft_living:view, data = kc_house_tidy)
+
+summary(model_5b)
+autoplot(model_5b)
+```
+
+
+```{r}
+model_5c <- lm(price ~ sqft_living + lat + view + waterfront +sqft_living:waterfront, data = kc_house_tidy)
+
+summary(model_5c)
+autoplot(model_5c)
+```
+
+
+```{r}
+model_5d <- lm(price ~ sqft_living + lat + view + waterfront + lat:view, data = kc_house_tidy)
+
+summary(model_5d)
+autoplot(model_5d)
+```
+
+
+```{r}
+model_5e <- lm(price ~ sqft_living + lat + view + waterfront + lat:waterfront, data = kc_house_tidy)
+
+summary(model_5e)
+autoplot(model_5e)
+```
+
+
+```{r}
+model_5f <- lm(price ~ sqft_living + lat + view + waterfront + view:waterfront, data = kc_house_tidy)
+
+summary(model_5f)
+autoplot(model_5f)
+
+
+```
+
+
+Two models have very similar multiple R-squared scores:
+model_5b and model_5c.
+
+Check with an anova? 
+
+```{r}
+anova(model_5b, model_5c)
+```
+They are both as good as each other!
+
 * Calculate the relative importance of predictors from your best $4$-predictor model (i.e. the model without an interaction). Which predictor affects `price` most strongly?
 
+```{r}
+library(relaimpo)
+calc.relimp(model_4a, type = "lmg", rela = TRUE)
+```
+From the relative importance, square foot of livig space is the most important predictor with a lmg of 0.66.
