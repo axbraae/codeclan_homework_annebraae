@@ -12,6 +12,7 @@ output: html_notebook
 library(tidyverse)
 library(here)
 library(GGally)
+library(ggfortify)
 
 diamonds <- read_csv(here("data/diamonds.csv"))
 
@@ -33,6 +34,9 @@ ggpairs()
 # ggpairs(diamonds[,c("carat", "x", "y", "z")])
 ```
 
+looking at the correlations - all very strongly related
+not adding more information - will skew model.
+multiple linearity
 
 <br>
 
@@ -140,6 +144,15 @@ For the model, 84% of the variance in price can be explained by the variance in 
 
 
 7. Add another predictor of your choice. Check your assumptions, diagnostics, and interpret the model.
+
+lm makes it's own dummy variables so you don't need to use them. If you use them as dummies need to put them in 7 times.
+
+```{r}
+model3 <- lm(price ~ carat + clarity, data = diamonds_trim)
+autoplot(model3)
+summary(model3)
+```
+
 
 ```{r}
 model2 <- lm(price ~ carat + clarity_SI2, data = diamonds_dummy)
