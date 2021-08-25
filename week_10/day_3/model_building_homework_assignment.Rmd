@@ -1,0 +1,235 @@
+---
+title: "Manual model building homework"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(modelr)
+library(GGally)
+library(ggfortify)
+```
+
+# Question 1
+
+Tidy up the data ready for regression:
+
+    * You might like to think about removing some or all of `date`, `id`, `sqft_living15`, `sqft_lot15` and `zipcode` (`lat` and `long` provide a better measure of location in any event).
+    * Have a think about how to treat `waterfront`. Should we convert its type?
+    * We converted `yr_renovated` into a `renovated` logical variable, indicating whether the property had ever been renovated. You may wish to do the same.
+    * Have a think about how to treat `condition` and `grade`? Are they interval or categorical ordinal data types?
+    
+```{r}
+kc_house <- read_csv("data/kc_house_data.csv")
+
+head(kc_house)
+
+#check missing
+kc_house %>% 
+  summarise(across(everything(), ~ sum(is.na(.x))))
+
+#number of distinct values in each variable
+kc_house %>% 
+  summarise(across(everything(), ~ n_distinct(.x)))
+
+#convert categorical variables to numeric/factor
+kc_house_tidy <- kc_house %>% 
+  mutate(waterfront = as.logical(waterfront),
+         renovated = ifelse(yr_renovated != 0, TRUE, FALSE),
+         condition = recode_factor(condition,
+                                   "1" = "A",
+                                   "2" = "B",
+                                   "3" = "C",
+                                   "4" = "D",
+                                   "5" = "E"),
+         grade = case_when(
+           grade >= 11 ~ "high",
+           grade > 7 ~ "above average",
+           grade == 7 ~ "average",
+           grade > 3 ~ "below average",
+           grade <=3 ~ "fail"
+         )) %>% 
+    select(-c("date", "id", "sqft_living15", "sqft_lot15", "zipcode", "yr_renovated"))
+```
+
+`condition` - convert to factor and relabel 1:5 as A:E
+`grade` - bin grade into 5 categories, high, above average, average, below average, fail
+
+# Question 2
+
+Check for aliased variables using the `alias()` function (this takes in a formula object and a data set). [**Hint** - formula `price ~ .` says 'price varying with all predictors', this is a suitable input to `alias()`]. Remove variables that lead to an alias. Check the 'Elements of multiple regression' lesson for a dropdown containing further information on finding aliased variables in a dataset.
+
+
+```{r}
+alias(lm(price ~ ., data = kc_house_tidy))
+```
+looks like I can drop sqft_basement
+
+```{r}
+kc_house_tidy <- kc_house_tidy %>% 
+  select(-sqft_basement)
+
+#check
+alias(lm(price ~ ., data = kc_house_tidy))
+```
+
+# Question 3
+
+Systematically build a regression model containing up to **four** main effects (remember, a main effect is just a single predictor with coefficient), testing the regression diagnostics as you go
+    * splitting datasets into numeric and non-numeric columns might help `ggpairs()` run in manageable time, although you will need to add either a `price` or `resid` column to the non-numeric dataframe in order to see its correlations with the non-numeric predictors.
+
+
+1. Have a look at correlated variables.
+Numeric:
+```{r}
+kc_house_tidy %>% 
+  select(where(is.numeric)) %>% 
+  ggpairs()
+```
+
+I had to blow this up but it looks like for the numeric variables, `sqft_living`, `sqft_above` and `bath` show the highest correlation with price.
+
+```{r}
+kc_house_tidy %>% 
+  select(where(~!is.numeric(.x)), price) %>% 
+  ggpairs()
+```
+
+For the categorical variables, it looks like `waterfront`, `grade` and `condition` have the highest variability when it comes to `price`.
+
+
+Build a first model with `sqft_living` as the explanatory variable (x) and `price` as the outcome variable (y)
+
+```{r}
+model_1a <- lm(price ~ sqft_living, data = kc_house_tidy)
+
+summary(model_1a)
+autoplot(model_1a)
+```
+
+The residuals do not fulfil the diagnostic criteria! The residuals are not normal at extremes of the distribution and the scale location indicates the residuals are heteroscedastic.
+
+The model currently only explains 49% of the variance in house price. I will have a look at the residuals and see if I can improve the model.
+
+
+```{r}
+kc_house_remaining_resid <- kc_house_tidy %>% 
+  add_residuals(model_1a) %>% 
+  select(-c("price", "sqft_living"))
+
+kc_house_remaining_resid %>% 
+  select(where(~!is.numeric(.x)), resid) %>% 
+  ggpairs()
+```
+
+```{r}
+kc_house_remaining_resid %>% 
+  select(where(is.numeric)) %>% 
+  ggpairs()
+```
+
+waterfront looks interesting from the box plots of the non-numeric and latitude looks interesting from the numeric data.
+
+Let's try both and see how the model looks
+
+```{r}
+
+model_2a <- lm(price ~ sqft_living + waterfront, data = kc_house_tidy)
+
+summary(model_2a)
+autoplot(model_2a)
+
+```
+
+```{r}
+model_2b <- lm(price ~ sqft_living + lat, data = kc_house_tidy)
+
+summary(model_2b)
+autoplot(model_2b)
+```
+
+model_2b explains more of the variance (higher multiple R-squared of 56%). Both models do not have brilliant residual diagnostics however. It is difficult to pick one to move forward with. The residuals are still heteroscedastic. I will take model_2b forwards and check the residuals for the next best explanatory variable.
+
+```{r}
+kc_house_remaining_resid <- kc_house_tidy %>% 
+  add_residuals(model_2b) %>% 
+  select(-c("price", "sqft_living", "lat"))
+
+kc_house_remaining_resid %>% 
+  select(where(~!is.numeric(.x)), resid) %>% 
+  ggpairs()
+
+```
+
+```{r}
+kc_house_remaining_resid %>% 
+  select(where(is.numeric)) %>% 
+  ggpairs()
+```
+
+Looking at the correlations of the residuals, view is the next highest correlated (at 0.303), while waterfront again looks promising in the categorical. I will focus on view for the next model.
+
+```{r}
+
+model_3a <- lm(price ~ sqft_living + lat + view, data = kc_house_tidy)
+
+summary(model_3a)
+autoplot(model_3a)
+
+```
+
+The model now explains 60% of the variation in house price. However, the residual diagnostics show a trend in the residuals variances which are still heteroscedastic.
+
+Let's move forward anyway and have a look at which variable might explain the next most variance in our model.
+
+```{r}
+kc_house_remaining_resid <- kc_house_tidy %>% 
+  add_residuals(model_3a) %>% 
+  select(-c("price", "sqft_living", "lat", "view"))
+
+kc_house_remaining_resid %>% 
+  select(where(~!is.numeric(.x)), resid) %>% 
+  ggpairs()
+```
+
+
+
+
+```{r}
+kc_house_remaining_resid %>% 
+  select(where(is.numeric), resid) %>% 
+  ggpairs()
+```
+
+Waterfront and year build (yr_built) look like good bets for me. I will add these to the model and select the best.
+
+```{r}
+model_4a <- lm(price ~ sqft_living + lat + view + waterfront, data = kc_house_tidy)
+
+summary(model_4a)
+autoplot(model_4a)
+```
+
+```{r}
+model_4b <- lm(price ~ sqft_living + lat + view + yr_built, data = kc_house_tidy)
+
+summary(model_4b)
+autoplot(model_4b)
+```
+
+The addition of waterfront to the model explains more of the variation in price than the addition of year built. Therefore I will move forward with model_4a.
+
+Both models show similar diagnostics of the residuals, which are fulfilling most criteria but which show some heteroscedaticity.
+
+
+
+
+
+Remember, if you are not sure whether including a categorical predictor is statistically justified, run an `anova()` test passing in the models with- and without the categorical predictor and check the p-value of the test.
+
+# Extensions
+
+* Consider possible interactions between your four main effect predictors and test their effect upon $r^2$. Choose your best candidate interaction and visualise its effect. 
+
+* Calculate the relative importance of predictors from your best $4$-predictor model (i.e. the model without an interaction). Which predictor affects `price` most strongly?
+
