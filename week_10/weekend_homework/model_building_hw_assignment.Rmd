@@ -1,0 +1,468 @@
+---
+title: "Model Building Homework"
+author: "Anne Braae"
+date: "27/08/2021"
+output: html_document
+---
+
+
+# Introduction 
+
+The data set focuses on avocado prices.
+
+Investigating the data:
+
+* Look at `data_dict.txt` for information on columns in the `avocado.csv` file.
+
+index
+Date: The date of the observation
+AveragePrice: the average price of a single avocado
+Total Volume: Total number of avocados sold
+4046: Total number of avocados with PLU 4046 sold
+4225: Total number of avocados with PLU 4225 sold
+4770: Total number of avocados with PLU 4770 sold
+Total Bags
+Small Bags
+Large Bags
+XLarge Bags
+type: conventional or organic
+year: the year
+region: the city or region of the observation
+
+Already know there will be some columns to remove from the analysis:
+index
+Date - use this to make a season column and then remove.
+total_bags - this information is found in the number of small bags, large bags and xlarge bags.
+region - has information overlap as it contains both cities and regions!
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(leaps)
+library(caret)
+```
+
+```{r}
+avocados <- read_csv("data/avocado.csv") %>% 
+  janitor::clean_names() %>% 
+  select(-c("x1", "total_bags"))
+
+head(avocados)
+```
+
+```{r}
+# make season column from date and delete date column:
+
+avocados <- avocados %>% 
+  mutate(season = lubridate::quarter(date),
+         season = recode(season, 
+                         "1" = "Winter", 
+                         "2" = "Spring", 
+                         "3" = "Summer", 
+                         "4" = "Fall")) %>% 
+  select(-date)
+
+```
+
+### Exploratory data analysis:
+
+```{r}
+#check missing
+avocados %>% 
+  summarise(across(everything(), ~ sum(is.na(.x))))
+
+#number of distinct values in each variable
+avocados %>% 
+  summarise(across(everything(), ~ n_distinct(.x)))
+```
+
+No missing variables, type has two categories, year has four and region has 54.
+
+Let's use `GGally::ggpairs()` to have a look at the histograms for numeric and non-numeric data.
+
+```{r}
+avocados %>% 
+  select(where(is.numeric)) %>% 
+  GGally::ggpairs()
+```
+
+```{r}
+avocados %>% 
+  select(where(~!is.numeric(.x)), average_price, -region) %>% 
+  GGally::ggpairs()
+```
+
+There are too many regions to check with ggpairs. Have a quick look at the box plots with ggplot.
+
+```{r}
+avocados %>% 
+  select(average_price, region) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = average_price, colour = region))
+```
+As expected, there is quite a wide range of variation in `average_price` compared with `region`. `region` contains a mix of cities and regions. There will be some overlap in data information here!
+
+I am going to remove the larger regions: West, SouthCentral, Southeast, Northeast, Plains, GreatLakes, TotalUS.
+
+```{r}
+avocados <- avocados %>% 
+  filter(
+    !(region %in% c("West", "SouthCentral", "Southeast", "Northeast", "Plains", "GreatLakes", "TotalUS"))
+    )
+
+# recheck box plots
+avocados %>% 
+  select(average_price, region) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = average_price, colour = region))
+```
+
+### Feature engineering:
+
+Check for alias
+```{r}
+alias(average_price ~ ., data = avocados)
+```
+No alias identified.
+
+Categorical variables are not factor variables so they can be left as is. 
+R functions will add the variables as dummies if needed.
+
+Automatic model building
+
+```{r}
+# recheck number of distinct values in each variable
+avocados %>% 
+  summarise(across(where(is.character), ~ n_distinct(.x)))
+```
+
+I am going to run automatic model building to generate a predictive model for average avocado price.
+
+```{r}
+# run forwards
+regsubsets_forwards <- regsubsets(average_price ~ ., data = avocados, nvmax = 53, method = "forward")
+
+sum_regsubsets_forwards <- summary(regsubsets_forwards)
+```
+
+
+```{r}
+# run backwards
+regsubsets_backwards <- regsubsets(average_price ~ ., data = avocados, nvmax = 53, method = "backward")
+
+sum_regsubsets_backwards <- summary(regsubsets_backwards)
+```
+
+
+Check output from the forwards and backwards selection to generate the models.
+
+```{r}
+plot(regsubsets_forwards, scale = "adjr2")
+plot(regsubsets_backwards, scale = "adjr2")
+```
+
+Not super clear from these plots as we have 53 possible variables added!
+
+Let's look at the summary plots
+
+```{r}
+plot(sum_regsubsets_forwards$rsq, type = "b")
+plot(sum_regsubsets_backwards$rsq, type = "b")
+```
+
+```{r}
+plot(sum_regsubsets_forwards$bic, type = "b")
+plot(sum_regsubsets_backwards$bic, type = "b")
+```
+
+Looks like between 10 and 20 predictors is the cut off for the best fitting model looking at both rsquared value and BIC.
+
+Let's have another look at the predictors in the model using 5 as a cut off for the maximum number of predictors to include.
+
+```{r}
+summary(regsubsets_forwards)$which[5,]
+```
+```{r}
+summary(regsubsets_backwards)$which[5,]
+```
+For 5 predictors there are only two levels of region (out of a possible 47!) selected in both forwards and backwards models. Other predictors include: type, year and season.
+
+Manually create two models that both have type, year and season, but that differ on the addition of region to see if it should be included as a predictor at all.
+
+```{r}
+mod_with_region <- lm(formula = average_price ~ type + year + season + region, data = avocados)
+summary(mod_with_region)
+```
+
+```{r}
+mod_without_region <- lm(formula = average_price ~ type + year + season, data = avocados)
+summary(mod_without_region)
+```
+```{r}
+anova(mod_without_region, mod_with_region)
+```
+The model with region is statistically significantly better than the model without region. Therefore it should be included in the model.
+
+Let's check the diagnostics of the model.
+
+```{r}
+autoplot(mod_with_region)
+```
+
+Hooray! The residual diagnostics look pretty good! The residuals vs. fitted fall around 0 indicating equal variances, the residuals have a normal distribution as apart from very high values, all values fall on or close to the line in the QQ plot. The variances are homoscedastic having similar variances (seen on the scale - location plot).
+
+
+The predictive model I have developed in terms of main effects is: `average_price ~ type + year + season + region`, I have not considered interaction terms. The model explains 59.7% of the variance of `average_price` and has a standard error of 0.2619.
+
+### Validation
+
+I will validate the model using k-fold cross validation with 10 folds.
+
+```{r}
+cv_10_fold <- trainControl(method = "cv",
+                           number = 10,
+                           savePredictions = TRUE)
+
+pred_model <- train(average_price ~ type + year + season + region, 
+                    data = avocados, trControl = cv_10_fold, method = "lm")
+```
+
+
+Calculate average error:
+```{r}
+mean(pred_model$resample$RMSE)
+```
+Calculate average r-squared
+```{r}
+mean(pred_model$resample$Rsquared)
+```
+
+The average error for the final model is 0.2623 and the average r-squared for the final model is 0.5902526.
+This means the model is able to account for 59% of the variance in the `average_price` of avocados with a standard error of 0.2623. My model suggests that avocado `type` as organic or conventional, what year they were sold in, what season they are sold and what region they are sold in all contribute to the `average_price` of the avocados.
+
+## Manual model building/Stepwise model building
+
+To generate an explanatory model for avocado prices I will manually build the model using a stepwise approach.
+For an explanatory model, I will focus on variables which are under the control of the seller (directly or indirectly).
+
+From the exploratory data analysis ggpairs plots, we also were given the correlation coefficients. I will select two variables from this to move forwards with building the model. I will first look at adding type and total volume.
+
+These variables looked like so:
+
+```{r}
+avocados %>% 
+  ggplot() +
+  aes(x = average_price, y = type) +
+  geom_boxplot()
+
+avocados %>% 
+  ggplot() +
+  aes(x = average_price, y = total_volume) +
+  geom_point()
+```
+
+```{r}
+avocados %>% 
+  ggplot() +
+  geom_histogram(aes(x = total_volume))
+```
+
+Log transform total volume to achieve a normal distribution for this variable
+```{r}
+avocados_transform <- avocados %>% 
+  mutate(log_total_volume = log10(total_volume + 1))
+
+# colour by type
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = log_total_volume, fill = type))
+
+```
+
+Interesting! So total volume is normally distributed when grouped by type!
+
+Let's check the other volume plots for possible transformation requirements.
+
+```{r}
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = x4046))
+
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = x4225))
+
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = x4770))
+```
+
+Looks like they all need to be log transformed.
+
+What about bags?
+```{r}
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = small_bags))
+
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = large_bags))
+
+avocados_transform %>% 
+  ggplot() +
+  geom_histogram(aes(x = x_large_bags))
+```
+These also need log transforming.
+
+Log transform all volume and number variables. Note that I am using log10(x+1) to avoid the undefined values which occur when taking a log10 of zero.
+
+```{r}
+avocados_transform <- avocados_transform %>% 
+  mutate(
+    log_x4046 = log10(x4046 + 1),
+    log_x4225 = log10(x4225 + 1),
+    log_x4770 = log10(x4770 + 1),
+    log_small_bags = log10(small_bags + 1),
+    log_large_bags = log10(large_bags + 1),
+    log_x_large_bags = log10(x_large_bags + 1)
+  ) %>% 
+  select(-c("x4046", "x4225", "x4770", "small_bags", 
+            "large_bags", "x_large_bags", "total_volume",
+            "year"))
+```
+
+Rerun ggpairs on log transformed data
+
+```{r}
+avocados_transform %>% 
+  select(where(is.numeric)) %>% 
+  GGally::ggpairs()
+```
+
+Correlations are now looking much better! Probably I should use this data in the automatic model building too. Will do this if I have time. Otherwise, I think the predictive model with out volume information is also sufficient.
+
+#### Model 1 - type and log(total_volume)
+
+```{r}
+model_1a <- lm(formula = average_price ~ type, 
+               data = avocados_transform, method = "lm")
+summary(model_1a)
+```
+Type explains 37% of the variation in average price of avocados.
+
+```{r}
+model_1b <- lm(formula = average_price ~ log_total_volume,
+               data = avocados_transform, method = "lm")
+summary(model_1b)
+```
+The log of total volume explains 36% of the variance in avocado price.
+
+Check which model is better than the null model with anova:
+
+```{r}
+null <- lm(average_price ~ 1, data = avocados_transform)
+
+anova(null, model_1a)
+
+anova(null, model_1b)
+
+anova(model_1a, model_1b)
+```
+
+If I am reading this right, model 1a and model 1b are statistically significantly different from the null model. However they are not statistically different from each other. I will choose type first, check the residuals.
+
+```{r}
+autoplot(model_1a)
+```
+
+Residuals look ok for type. I will add to the data and check the correlation to select the next predictor.
+
+```{r}
+avocados_transform_remaining_resid <- avocados_transform %>% 
+  modelr::add_residuals(model_1a) %>% 
+  select(-c("average_price", "type"))
+
+avocados_transform_remaining_resid %>% 
+  select(where(is.numeric), resid) %>% 
+  GGally::ggpairs()
+```
+
+
+Log of large bags are the next best predictor to add to the model.
+
+```{r}
+model_2a <- lm(formula = average_price ~ type + log_large_bags, 
+               data = avocados_transform, method = "lm")
+
+summary(model_2a)
+```
+Adding log of large bags has increased the amount of variance explained by the model to 40%.
+
+Checking the residual diagnostics:
+
+```{r}
+autoplot(model_2a)
+```
+The residuals look good. They are still fulfilling their diagnostic criteria.
+
+Let's add the residuals and check for the next predictor.
+
+```{r}
+avocados_transform_remaining_resid <- avocados_transform %>% 
+  modelr::add_residuals(model_2a) %>% 
+  select(-c("average_price", "type", "log_large_bags"))
+
+avocados_transform_remaining_resid %>% 
+  select(where(is.numeric), resid) %>% 
+  GGally::ggpairs()
+```
+
+
+```{r}
+avocados_transform_remaining_resid %>% 
+  select(where(~!is.numeric(.x)), resid, -region) %>% 
+  GGally::ggpairs()
+```
+
+```{r}
+avocados_transform_remaining_resid %>% 
+  select(resid, region) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = resid, colour = region))
+```
+Let's try adding region and log_x4225
+
+```{r}
+model_3a <- lm(formula = average_price ~ type + log_large_bags + log_x4225, 
+               data = avocados_transform, method = "lm")
+
+summary(model_3a)
+```
+
+```{r}
+model_3b <- lm(formula = average_price ~ type + log_large_bags + region, 
+               data = avocados_transform, method = "lm")
+
+summary(model_3b)
+```
+
+Adding region into the model accounts for 54% of the variation in average price! Check the residuals for thsi model
+
+```{r}
+autoplot(model_3b)
+```
+
+Residuals look good. They are fulfilling the assumptions, follow normal distribution and show no trends.
+
+Add the residuals to the model and select the final predictor.
+
+```{r}
+avocados_transform_remaining_resid <- avocados_transform %>% 
+  modelr::add_residuals(model_3b) %>% 
+  select(-c("average_price", "type", "log_large_bags", "region"))
+
+avocados_transform_remaining_resid %>% 
+  select(where(is.numeric), resid) %>% 
+  GGally::ggpairs()
+```
+
