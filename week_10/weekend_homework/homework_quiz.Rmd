@@ -1,0 +1,37 @@
+---
+title: "Homework Quiz"
+output: html_notebook
+---
+Homework Quiz
+
+I want to predict how well 6 year-olds are going to do in their final school exams. Using the following variables am I likely under-fitting, fitting well or over-fitting? Postcode, gender, reading level, score in maths test, date of birth, family income.
+
+* You are probably overfitting. There are some variables in there which should have no impact on final school exam performance. I would remove gender, postcode.
+
+If I have two models, one with an AIC score of 34,902 and the other with an AIC score of 33,559 which model should I use?
+
+* You should use the model with the lower AIC score so the one with an AIC of 33559.
+
+I have two models, the first with: r-squared: 0.44, adjusted r-squared: 0.43. The second with: r-squared: 0.47, adjusted r-squared: 0.41. Which one should I use?
+
+* You should use the first model as the adjusted r-squared and r-squared values are similar. The lower adjusted r-squared value for the second model shows it is probably overfitted.
+
+I have a model with the following errors: RMSE error on test set: 10.3, RMSE error on training data: 10.4. Do you think this model is over-fitting?
+
+* Possibly. I would investigate other measures of over-fitting to confirm. Because the model is trained on the training data you expect this to have a lower RMSE than for the test set. Which is different from the case you have here.
+
+How does k-fold validation work?
+* K-fold validation works by subsetting the data into k number of parts ("folds"). The standard number for k is 10. Next one of the folds is set aside and the remaining folds (9 if k = 10) are used to train the model. The remaining fold is then used to test the model. This process is repeated saving a different fold for testing until all folds have been used for the test set. Once this has finished the error across all the folds are averaged giving a very accurate measure of a model's performance.
+
+What is a validation set? When do you need one?
+* The validation set is a subset of data which is not used for training or testing. It will give a final estimate of the expected performance of the model you have built. It should be used at the very end of the model building, testing and training process to assess the final model.
+
+It is needed if you are comparing many different types of models or if your model is very complex. This is because you are at greater risk of overfitting your model in these situations.
+
+Describe how backwards selection works.
+
+* Backwards selection starts with a model that contains all the possible predictor variables and then drops the predictors one at a time. The predictor to be dropped is selected as the one which will lower the r2 the least when it is dropped. This selection continues until all predictors have been dropped from the model.
+
+Describe how best subset selection works.
+
+* Best subset selection or exhaustive search works by searching for all possible predictor combinations at each particular level of the model. The combinations which produce the best r2 are saved. This selection method increases exponentially with the number of predictors added to the model.
