@@ -39,6 +39,8 @@ region - has information overlap as it contains both cities and regions!
 library(tidyverse)
 library(leaps)
 library(caret)
+library(ggfortify)
+library(GGally)
 ```
 
 ```{r}
@@ -238,6 +240,11 @@ mean(pred_model$resample$Rsquared)
 
 The average error for the final model is 0.2623 and the average r-squared for the final model is 0.5902526.
 This means the model is able to account for 59% of the variance in the `average_price` of avocados with a standard error of 0.2623. My model suggests that avocado `type` as organic or conventional, what year they were sold in, what season they are sold and what region they are sold in all contribute to the `average_price` of the avocados.
+
+
+# Extension
+
+Now I will try manual model building to generate an explanatory model. Will see how far I get with this.
 
 ## Manual model building/Stepwise model building
 
