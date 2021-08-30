@@ -33,7 +33,7 @@ The dotted lines are the decision boundaries. These are lines which are as far a
 
 The line (or plane for many dimensions) with the greatest margin between the points is selected as the hyperplane. Selecting the hyperplane in this way makes classifying additional data points easier.
 
-```{r, echo=FALSE, out.width="50%", fig.cap="Selecting the hyperplane."}
+```{r, echo=FALSE, out.width="50%", fig.cap="Selecting the hyperplane. Source [3]"}
 knitr::include_graphics("svm_hyperplane.png")
 ```
 
