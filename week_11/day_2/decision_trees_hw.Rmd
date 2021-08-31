@@ -1,8 +1,10 @@
 ---
 title: "Decision Trees Homework"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(rpart)
 library(rpart.plot)
 library(tidyverse)
@@ -157,10 +159,4 @@ conf_mat <- titanic_test_pred %>%
 
 conf_mat
 ```
-          Truth
-Prediction No Yes
-       No  10   4
-       Yes  0  15
-
-
 The confusion matrix shows the true positive, true negative and false positive and false negatives which our model predicts in the data. For this model, it predicts 10 of 10 negatives correctly, so 100% true negative rate and zero false negative rate. It predicts 15 of 19 positives correctly, so it has a 0.78% true positive rate and 4 out of 19 positives incorrectly so 0.21 false positive rate.
