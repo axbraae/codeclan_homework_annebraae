@@ -1,0 +1,156 @@
+---
+title: "Clustering homework assignment"
+output:
+  html_document:
+    df_print: paged
+---
+
+* You have been provided some customer data from a shopping centre. Do some exploratory analysis on the data. Comment on findings. 
+
+```{r}
+library(tidyverse)
+library(factoextra)
+library(corrplot)
+library(broom)
+```
+
+```{r}
+mall_customers <- read_csv("data/mall_customers.csv") %>% 
+  janitor::clean_names()
+```
+
+```{r}
+# check for missing data
+any(is.na(mall_customers))
+
+# count distinct data
+mall_customers %>% 
+  summarise(across(everything(), ~ n_distinct(.x)))
+```
+* set row_names to `customer_id`
+* set gender to factor
+
+```{r}
+mall_customers <- mall_customers %>% 
+  column_to_rownames("customer_id") %>%
+  mutate(gender = as.factor(gender))
+```
+
+There are two genders which I have set as a factor character. The `customer_id` has been set as a row_name. There are no missing values. I will have a look at possible correlations in the numeric data after scaling the data.
+
+```{r}
+mall_customers_scale <- mall_customers %>% 
+  mutate_if(is.numeric, scale)
+
+mall_customers_scale_num <- mall_customers_scale %>% 
+  select(is.numeric)
+
+corrplot(cor(mall_customers_scale_num), method = "number", type = "lower")
+```
+Looks like in the numeric data age and spending_score_1_100 are moderately weakly correlated.
+
+* We are interested in creating a marketing campaign to target customers based on their spending score and annual income. Perform a k-means clustering to find if there are meaningful clusters in the data to target the customers. 
+
+```{r}
+# make a single k-means cluster
+
+cluster_mall <- kmeans(mall_customers_scale_num,
+                       centers = 6,
+                       nstart = 25)
+
+cluster_summary <- tidy(cluster_mall,
+     col.names = colnames(mall_customers_scale_num))
+cluster_summary
+
+glance(cluster_mall)
+```
+Looks like the data can be clustered. For 6 clusters the total within sum of squares is 133.199, and the number of iterations stops at 4. The within sum of squares for individual clusters is low (20) at 2 clusters and at 4 clusters.
+
+* Perform k-means clustering and chose a value of k.
+
+```{r}
+# set maximum numbers of clusters
+k_max <- 20
+
+k_clusters <- tibble(k = 1:k_max) %>%
+  mutate(
+    kclust = map(k, ~ kmeans(
+      mall_customers_scale_num, .x, nstart = 25)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, mall_customers_scale)
+  )
+
+unnested_k_clusters <- k_clusters %>% 
+  unnest(glanced)
+
+unnested_k_clusters
+```
+```{r}
+# look for the "elbow"
+ggplot(unnested_k_clusters) +
+  aes(x = k, y = tot.withinss) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1,20, by = 1))
+```
+
+Looks like 2 or 4 clusters produces an elbow. Let's check another metric to select clusters.
+
+```{r}
+library(factoextra)
+fviz_nbclust(mall_customers_scale_num,
+             kmeans,
+             method = "silhouette",
+             nstart = 25)
+```
+
+The automatic output has selected 6 clusters, but I think you could argue for 2 given the line graph shown.
+
+Let's have one last look at the final metric for selecting clusters, the gap statistic.
+
+```{r}
+fviz_nbclust(mall_customers_scale_num,
+             kmeans,
+             method = "gap_stat",
+             nstart = 25)
+```
+Ok the gap statistic is also selecting 6 clusters. So we will go with 6 clusters as our chosen k value.
+
+* Visualise the clustering for your chosen value of k.
+
+```{r}
+unnested_k_clusters %>% 
+  unnest(cals = c(augmented)) %>% 
+  filter(k == 6) %>% 
+  ggplot() +
+  aes(x = age, y = annual_income_k, colour = .cluster) +
+  geom_point(aes(colour = .cluster))
+
+unnested_k_clusters %>% 
+  unnest(cals = c(augmented)) %>% 
+  filter(k == 6) %>% 
+  ggplot() +
+  aes(x = age, y = spending_score_1_100, colour = .cluster) +
+  geom_point(aes(colour = .cluster))
+
+unnested_k_clusters %>% 
+  unnest(cals = c(augmented)) %>% 
+  filter(k == 6) %>% 
+  ggplot() +
+  aes(x = annual_income_k, y = spending_score_1_100, colour = .cluster) +
+  geom_point(aes(colour = .cluster))
+```
+
+* Do you think the clustering seems a good fit for this data?
+
+It seems ok. I would probably remove age from the clustering analysis and run the k-means clustering again.
+
+* Comment on the attributes on one or two of the clusters (maybe even give them a label if you like - like in section 4.1 of the 'Segmentation & clustering intro' lesson).
+
+The clustering seems to work the best for annual income and age.
+Spending and age do not really show good groupings. But spending and annual income do show good groupings.
+
+I cannot find section 4.1 of the intro lesson? Maybe it has been relabeled?
+
+However for the clustering for age and spending, there is a clear group, 3 with an above average spending score and a below average customer age who may be targeted with marketing as a useful group to increase spending at the mall. Looking at this cluster in income and spending, their income is also above average. I think this would be a good group of customers to target with incentives to come to the mall and would increase spending overall.
