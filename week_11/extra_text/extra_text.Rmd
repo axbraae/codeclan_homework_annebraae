@@ -1,0 +1,11 @@
+---
+title: "StarTrek Voice commands"
+output: html_notebook
+---
+Data from tidy tuesday 2021-08-17
+
+```{r}
+computer <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-08-17/computer.csv')
+
+```
+
