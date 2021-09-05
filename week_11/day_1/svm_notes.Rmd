@@ -2,7 +2,9 @@
 title: "Support Vector Machine notes"
 author: "Anne Braae"
 date: "30/08/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
