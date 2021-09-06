@@ -1,0 +1,301 @@
+---
+title: "Logistic Regression Weekend Homework"
+author: "Anne Braae"
+date: "03/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(modelr)
+library(glmulti)
+library(pROC)
+```
+
+
+# Orange juice predictive classifier
+Identifying Citrus Hill OR Minute Maid customers.
+
+# Data cleaning and wrangling
+
+Load in the data and have a look.
+
+```{r}
+juice <- read_csv(here::here("data/orange_juice.csv")) %>% 
+  janitor::clean_names()
+
+summary(juice)
+head(juice)
+```
+
+```{r}
+# check for missing values
+any(is.na(juice))
+
+# check distinct values
+juice %>% 
+  summarise(across(everything(), ~ n_distinct(.x)))
+```
+
+
+From the data dictionary there are some duplicate columns.
+
+* Keep store_id, remove store these are the same - store 0 is store_id 7.
+* Remove store7, this will be remade from store_id dummy variables.
+
+* Set the following as characters, and set as factors:
+ - store_id
+
+* Set the following to logical vectors:
+ - purchase to logical purchase_mm
+ - special_ch
+ - special_mm
+ 
+* Might be some overlap in information for list_price differences and price differences with other variables. Leave in for now but check these in alias.
+
+```{r}
+juice_trim <- juice %>% 
+  fastDummies::dummy_cols(
+    select_columns = c("store_id"), remove_first_dummy = TRUE, 
+    remove_selected_columns = TRUE) %>% 
+  mutate(across(starts_with("store_id"), ~ as.logical(.x))) %>% 
+  mutate(
+    purchase_mm = purchase == "MM",
+    special_ch = as.logical(special_ch),
+    special_mm = as.logical(special_mm)) %>% 
+  select(-c("purchase", "store7", "store"))
+```
+
+ 
+### How to deal with weekof_purchase
+* weekof_purchase contains week 227 to week 278 (52 weeks ~ 1 year period). But who knows when this is? I am going to split to 4 (quarters). Arbitrarily assign first section as Q1, but be aware this has no relation to calendar so it is unclear if this is Q1 Jan - Mar or not.
+
+Let's have a look at this versus purchase and see if it makes sense to do this.
+
+```{r}
+juice %>% 
+  ggplot() +
+  aes(x = weekof_purchase, fill = purchase) +
+  geom_bar() +
+  # add the quarter division
+  geom_segment(aes(x = 239.5, xend = 239.5, y = 0, yend = 40)) +
+  geom_segment(aes(x = 252.5, xend = 252.5, y = 0, yend = 40)) +
+  geom_segment(aes(x = 265.5, xend = 265.5, y = 0, yend = 40)) +
+  geom_segment(aes(x = 278.5, xend = 278.5, y = 0, yend = 40))
+```
+
+This split seems reasonable to me. I will set the weeks as quarters and set this as a factor variable.
+
+```{r}
+juice_trim <- juice_trim %>% 
+  mutate(quarter = as.factor(case_when(weekof_purchase < 240 ~ "Q1",
+                                       weekof_purchase < 252 ~ "Q2",
+                                       weekof_purchase < 266 ~ "Q3",
+                                       weekof_purchase < 279 ~ "Q4"
+                                       )
+                             )
+         ) %>% 
+  select(-weekof_purchase) 
+```
+
+
+## Checking for aliases
+
+```{r}
+alias(purchase_mm ~ ., data = juice_trim)
+```
+Ah ha! The `sale_price_mm` and `sale_price_ch` are related to the `disc_ch` and `disc_mm`. Unsurprising. Remove the discounts.
+
+Ok so what do to. I will remove `list_price_diff`, this can be estimated from `price_ch` and  `price_mm`. 
+
+Remove these variables and recheck.
+
+```{r}
+juice_trim <- juice_trim %>% 
+  select(-c("list_price_diff", "disc_ch", "disc_mm"))
+```
+
+```{r}
+alias(purchase_mm ~ ., data = juice_trim)
+```
+I will remove `price_diff` as this can be esticated from the `sale_price`
+
+```{r}
+juice_trim <- juice_trim %>% 
+  select(-price_diff)
+```
+
+
+```{r}
+alias(purchase_mm ~ ., data = juice_trim)
+```
+
+## Exploratory data analysis
+
+Quick check of variables which may relate to purchase_mm using `ggpairs()` function from `GGally` package.
+
+```{r}
+juice_trim %>% 
+  select(where(is.numeric), purchase_mm) %>% 
+  GGally::ggpairs()
+```
+Possible interesting relationships with `purchase_mm` in `loyal_ch`, `sale_price_mm` and `sale_price_ch`.
+
+```{r}
+juice_trim %>% 
+  select(where(~!is.numeric(.x))) %>% 
+  GGally::ggpairs()
+```
+Possible interesting non-numeric interactions with `purchase_mm` include `special_ch`, `store_id_4`, `store_id_7`, `special_ch`.
+
+And it looks like we are good to go for some modelling!
+
+# Model building
+
+## Test/train split
+
+```{r}
+# count total rows in data
+n_data <- nrow(juice_trim)
+
+# make a test index
+test_index <- sample(1:n_data, size = n_data*0.2)
+
+# use the test index to create test and training 
+juice_test  <- slice(juice_trim, test_index)
+juice_train <- slice(juice_trim, -test_index)
+
+# can also make test train split with caret::createDataPartition
+
+```
+
+Check the split is representative
+
+```{r}
+juice_test %>%
+ janitor::tabyl(purchase_mm)
+```
+
+```{r}
+juice_train %>%
+ janitor::tabyl(purchase_mm)
+```
+The splits in the two groups look pretty good! I am happy to continue with the model building
+
+## Automatic model building
+
+Run an exhaustive automatic model to check all possible model combinations over all main effects only. Using BIC as the criteria for selection.
+
+```{r}
+glmulti_search_all_mains <- glmulti(
+  purchase_mm ~ ., 
+  data = juice_train,
+  level = 1,               # No interactions considered, main effects only
+  method = "h",            # Exhaustive approach
+  crit = "bic",            # BIC as criteria
+  confsetsize = 10,        # Keep 10 best models
+  plotty = F, 
+  report = T,              # No plots, but provide interim reports
+  fitfunction = "glm",     # glm function
+  family = binomial(link = "logit")) # binomial family for logistic regression
+
+```
+
+### Best model with no interactions:
+
+After 16950 models:
+Best model: purchase_mm ~ loyal_ch + sale_price_mm + sale_price_ch + store_id_7
+Crit= 681.237372306889
+Mean crit= 685.463765240963
+
+```{r}
+summary(glmulti_search_all_mains)
+```
+
+## Automatic model with interactions
+
+Note for glmulti 1 just means add the intercept! remove this from the models...
+
+The best model was: `purchase_mm ~ loyal_ch + sale_price_mm + sale_price_ch + store_id_7`
+
+Now I will run this selecting one interaction pair for all the model options chosen in the automatic model.
+
+```{r}
+glmulti_search_previous_mains_one_pair <- glmulti(
+  purchase_mm ~ loyal_ch + sale_price_mm + sale_price_ch + store_id_7, 
+  data = juice_train,
+  level = 2,               # Interactions considered
+  method = "h",            # Exhaustive approach
+  crit = "bic",            # BIC as criteria
+  confsetsize = 10,        # Keep 10 best models
+  marginality = TRUE,      # consider pairs only if both main effects in model
+  minsize = 6,             # minsize, maxsize and marginality here force 
+  maxsize = 6,             # inclusion of a single pair beyond the five main effects
+  plotty = F, 
+  report = T,              # No plots, but provide interim reports
+  fitfunction = "glm",     # glm function
+  family = binomial(link = "logit")) # binomial family for logistic regression
+```
+
+
+```{r}
+summary(glmulti_search_previous_mains_one_pair)
+```
+
+The best interaction model is: `purchase_mm ~ loyal_ch + sale_price_mm + sale_price_ch + store_id_7 + sale_price_mm:loyal_ch + store_id_7:sale_price_ch`.
+
+## Checking model performance and accuracy
+
+Let's check the performance and accuracy of the best logistic regression model with and without interaction terms and see which is the best.
+
+First add the predictions from the models built on the training data to the test data. Let's see how the models do!
+
+```{r}
+model_all <- glm(purchase_mm ~ loyal_ch + sale_price_mm + sale_price_ch + store_id_7, data = juice_train, family = binomial(link = "logit"))
+
+model_all_int <- glm(purchase_mm ~ loyal_ch + sale_price_mm + sale_price_ch + store_id_7 + sale_price_ch:sale_price_mm + store_id_7:sale_price_ch, data = juice_train, family = binomial(link = "logit"))
+
+juice_test_pred_all <- juice_test %>% 
+  add_predictions(model_all, type = "response")
+
+juice_test_pred_all_int <- juice_test %>% 
+  add_predictions(model_all_int, type = "response")
+```
+
+Generate ROC objects for the two model predictions.
+
+```{r}
+roc_obj_all <- juice_test_pred_all %>% 
+  roc(response = purchase_mm, predictor = pred)
+
+roc_obj_all_int <- juice_test_pred_all_int %>% 
+  roc(response = purchase_mm, predictor = pred)
+
+roc_curve <- ggroc(data = list(pred_all = roc_obj_all,
+                               pred_int = roc_obj_all_int),
+                   legacy.axes = TRUE) +
+  coord_fixed()
+
+roc_curve
+```
+
+
+The ROC curves for the two models are very similar. Let's calculate the AUC as a  measure of performance.
+
+```{r}
+auc(roc_obj_all)
+```
+```{r}
+auc(roc_obj_all_int)
+```
+
+The model with out the interactions has the higher AUC (0.907 compared to 0.904). Therefore the model without interactions is marginally better than the model with theh interactions based on their AUC values.
+
+# Final model for orange juice
+
+The best model to predict orange juice sales is:
+`purchase_mm ~ 1 + loyal_ch + sale_price_mm + sale_price_ch + store_id_7`
